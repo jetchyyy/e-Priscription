@@ -1,0 +1,12 @@
+project_id = "e-reseta"
+
+# Both functions authenticate themselves (HMAC signature / mock flag),
+# so Supabase's JWT check must be off.
+[functions.payment-webhook]
+verify_jwt = false
+
+[functions.mock-gateway]
+verify_jwt = false
+
+[functions.register-doctor]
+verify_jwt = false

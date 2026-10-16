@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply bg-ink-50 font-sans text-ink-900 antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 { @apply font-display tracking-tight; }
+  :focus-visible { @apply outline-none ring-4 ring-brand-500/30; }
+  ::selection { @apply bg-brand-200 text-brand-950; }
+}
+
+@layer components {
+  .mesh-bg {
+    background:
+      radial-gradient(60rem 40rem at 85% -10%, rgb(61 203 178 / .28), transparent 60%),
+      radial-gradient(50rem 36rem at -10% 10%, rgb(240 170 36 / .14), transparent 55%),
+      radial-gradient(40rem 30rem at 50% 110%, rgb(20 142 125 / .18), transparent 60%),
+      #f6f8fb;
+  }
+  .glass {
+    @apply border border-white/60 bg-white/70 backdrop-blur-xl;
+  }
+  .dark-panel {
+    background:
+      radial-gradient(34rem 24rem at 100% 0%, rgb(61 203 178 / .35), transparent 60%),
+      radial-gradient(30rem 24rem at 0% 100%, rgb(240 170 36 / .18), transparent 60%),
+      linear-gradient(160deg, #0f2f2c, #0a101c 70%);
+  }
+  .rx-paper {
+    background-color: #fffefb;
+    background-image:
+      linear-gradient(rgb(20 142 125 / .04) 1px, transparent 1px);
+    background-size: 100% 2rem;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700 ring-1 ring-brand-200;
+  }
+}
+
+/* Print only the prescription (patient "Print / Save as PDF") */
+@media print {
+  @page { margin: 12mm; }
+  body * { visibility: hidden !important; }
+  #rx-print, #rx-print * { visibility: visible !important; }
+  #rx-print {
+    position: absolute; left: 0; top: 0; width: 100%;
+    box-shadow: none !important; border: none !important;
+    filter: none !important; animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

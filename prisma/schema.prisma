@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  admin
+  doctor
+}
+
+enum DoctorStatus {
+  pending
+  approved
+  rejected
+}
+
+model User {
+  id              String         @id @default(uuid()) @db.Uuid
+  email           String         @unique
+  role            Role           @default(doctor)
+  status          DoctorStatus   @default(pending)
+  fullName        String         @map("full_name")
+  prcNo           String?        @map("prc_no")
+  ptrNo           String?        @map("ptr_no")
+  s2No            String?        @map("s2_no")
+  specialty       String?
+  clinicName      String?        @map("clinic_name")
+  clinicAddress   String?        @map("clinic_address")
+  phone           String?
+  licenseFilePath String?        @map("license_file_path")
+  rejectReason    String?        @map("reject_reason")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  prescriptions   Prescription[]
+
+  @@map("profiles")
+}
+
+model Prescription {
+  id             String    @id
+  doctorId       String    @map("doctor_id") @db.Uuid
+  doctor         User      @relation(fields: [doctorId], references: [id])
+  patientName    String    @map("patient_name")
+  patientContact String?   @map("patient_contact")
+  patientDob     DateTime? @map("patient_dob") @db.Date
+  patientSex     String?   @map("patient_sex")
+  patientAddress String?   @map("patient_address")
+  diagnosis      String?
+  notes          String?
+  medicines      Json
+  amount         Decimal   @db.Decimal(10, 2)
+  paymentStatus  String    @default("unpaid") @map("payment_status")
+  paidAt         DateTime? @map("paid_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@map("prescriptions")
+}
