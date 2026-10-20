@@ -162,6 +162,11 @@ Reuse them for any new sign-in, sign-up, forgot-password or reset-password scree
 - **Server errors:** one plain box (`.aform__error`), neutral wording ("Email or password is incorrect"), no "Oops".
 - **Footer links:** register, a note for patients that they need no account, the other portal's sign in.
 - **No Ody** on any auth screen (mascot rule). Keep the existing sign-in logic, validation and redirects untouched.
+- **Long forms (registration):** pass `steps` and `current` to `AuthShell`; the navy side stays pinned in view
+  (sticky, full height) with a faint Greek-key texture and a steps card instead of the O.
+- **Consent is required to register:** the form has an unticked "I have read and agree to the Terms and Conditions and
+  the Privacy Policy" checkbox (`acceptTerms`, `z.literal(true)` in `registerSchema`). Links open in a new tab so the
+  form is not lost. Never pre-tick it, never remove it, and keep the account from being created without it.
 
 ## 11. Doctor portal: how to design it
 

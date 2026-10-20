@@ -4,10 +4,11 @@ import '../../marketing/site.css';
 import { Lockup, RxSlip } from '../../marketing/components';
 
 /**
- * Sign-in shell: navy side with the O and a drawn prescription, warm form side.
+ * Sign-in shell: navy side with the O and a drawn prescription (or, with `steps`, the road to a first
+ * prescription), warm form side. The side stays in view while a long form scrolls.
  * Ody is deliberately absent: the mascot guide keeps it off login forms.
  */
-export function AuthShell({ title, lead, tabTitle, sideTitle, sideText, children, footer }) {
+export function AuthShell({ title, lead, tabTitle, sideTitle, sideText, steps, current = 0, children, footer }) {
   useEffect(() => { document.title = `${tabTitle ?? title} · E-Prescription by ODYSSEY`; }, [tabTitle, title]);
   return (
     <div className="ody auth">
@@ -17,13 +18,24 @@ export function AuthShell({ title, lead, tabTitle, sideTitle, sideText, children
           <h2>{sideTitle}</h2>
           <p>{sideText}</p>
         </div>
-        <div className="auth__o" aria-hidden="true">
-          <div className="o-letter o-letter--on-navy">
-            <div className="o-letter__rim">
-              <div className="o-letter__counter o-letter__counter--centre"><RxSlip stage="paid" /></div>
+        {steps ? (
+          <ol className="auth__steps" aria-label="How registration works">
+            {steps.map(([t, d], i) => (
+              <li key={t} className={i < current ? 'is-done' : i === current ? 'is-current' : undefined} aria-current={i === current ? 'step' : undefined}>
+                <span className="o-dot" aria-hidden="true" />
+                <span><b>{t}</b>{d}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="auth__o" aria-hidden="true">
+            <div className="o-letter o-letter--on-navy">
+              <div className="o-letter__rim">
+                <div className="o-letter__counter o-letter__counter--centre"><RxSlip stage="paid" /></div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </aside>
 
       <main className="auth__main">

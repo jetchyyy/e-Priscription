@@ -10,6 +10,13 @@ import { friendlyAuthError } from '../../auth/api';
 import { registerDoctor } from '../api';
 import { registerSchema } from '../schemas';
 
+const STEPS = [
+  ['Create your account', 'Your details and clinic, a few minutes.'],
+  ['Upload your PRC license', 'A photo or PDF of your PRC ID.'],
+  ['An administrator checks it', 'We email you when you are approved.'],
+  ['Send your first prescription', 'Write it, share the link, get paid to your QR.'],
+];
+
 const SPECIALTIES = [
   'General Practitioner', 'Internal Medicine', 'Pediatrics', 'Obstetrics & Gynecology', 'Family Medicine',
   'Cardiology', 'Dermatology', 'ENT – Otolaryngology', 'Ophthalmology', 'Orthopedics', 'Psychiatry',
@@ -35,7 +42,7 @@ export default function DoctorRegister() {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { specialty: '', ptrNo: '', s2No: '' },
+    defaultValues: { specialty: '', ptrNo: '', s2No: '', acceptTerms: false },
   });
   const file = watch('licenseFile')?.[0];
 
@@ -51,8 +58,11 @@ export default function DoctorRegister() {
   if (result) {
     return (
       <AuthShell
+        tabTitle="Registration submitted"
         sideTitle="What happens next"
         sideText="An administrator checks your PRC license, then you can send your first prescription."
+        steps={STEPS}
+        current={result.needsEmailConfirm ? 1 : 2}
       >
         <div className="text-center space-y-4 py-8">
           {result.needsEmailConfirm ? (
@@ -80,8 +90,11 @@ export default function DoctorRegister() {
 
   return (
     <AuthShell
+      tabTitle="Create your account"
       sideTitle="Write prescriptions. Get paid directly."
       sideText="An administrator checks your PRC license, then you can send your first prescription."
+      steps={STEPS}
+      current={0}
     >
       <div className="max-w-[560px] w-full">
         <h1 className="font-display text-[32px] font-bold text-[#152839]">Create your account</h1>
@@ -153,13 +166,30 @@ export default function DoctorRegister() {
             )}
           </div>
 
+          <div className="consent">
+            <label className={`consent__box${errors.acceptTerms ? ' has-error' : ''}`}>
+              <input
+                type="checkbox"
+                aria-invalid={errors.acceptTerms ? true : undefined}
+                aria-describedby={errors.acceptTerms ? 'acceptTerms-err' : undefined}
+                {...register('acceptTerms')}
+              />
+              <span>
+                I have read and agree to the{' '}
+                <a href="/terms" target="_blank" rel="noreferrer" className="link">Terms and Conditions</a> and the{' '}
+                <a href="/privacy" target="_blank" rel="noreferrer" className="link">Privacy Policy</a>, including the use
+                of my license details to verify my registration.
+              </span>
+            </label>
+            {errors.acceptTerms && (
+              <p id="acceptTerms-err" role="alert" className="consent__err">{errors.acceptTerms.message}</p>
+            )}
+          </div>
+
           <div className="space-y-3 pt-2">
             <Button type="submit" variant="accent" size="lg" className="w-full" loading={isSubmitting}>
               Create account
             </Button>
-            <p className="text-center text-xs text-[#5f6a7c]">
-              Personal data is collected solely to verify professional license standing under RA 10173.
-            </p>
             <p className="text-center text-sm text-[#45546a]">
               Already registered? <Link to="/login" className="font-semibold text-[#152839] hover:underline">Sign in</Link>
             </p>

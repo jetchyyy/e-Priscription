@@ -14,10 +14,10 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  /* No colour here: headings take the colour of their section, so they stay light on navy panels. */
   h1, h2, h3, h4 {
     font-family: var(--f-display, 'Poppins', sans-serif);
     letter-spacing: -0.025em;
-    color: var(--navy, #152839);
   }
   :focus-visible { outline: 3px solid #ff6f07; outline-offset: 2px; }
   ::selection { background: #ff6f07; color: #152839; }

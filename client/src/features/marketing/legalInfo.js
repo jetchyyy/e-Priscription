@@ -4,7 +4,7 @@ export const LEGAL = {
   company: 'Odysseyph IT Solutions',
   registration: '[DTI or SEC registration no.]',
   address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
-  email: '[support email]',
+  email: 'odysseyphitsolutions@gmail.com',
   dpoName: '[Name of Data Protection Officer]',
   dpoEmail: '[dpo email]',
   dpoPhone: '[DPO phone]',

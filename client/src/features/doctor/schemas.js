@@ -42,6 +42,9 @@ export const registerSchema = z
       .refine((f) => f?.length === 1, 'Upload a photo or PDF of your PRC license')
       .refine((f) => !f?.[0] || f[0].size <= MAX_FILE, 'File must be 5 MB or smaller')
       .refine((f) => !f?.[0] || LICENSE_TYPES.includes(f[0].type), 'Use a JPG, PNG or PDF file'),
+    acceptTerms: z.literal(true, {
+      errorMap: () => ({ message: 'Agree to the Terms and Conditions and the Privacy Policy to create your account' }),
+    }),
   })
   .refine((v) => v.password === v.confirmPassword, {
     path: ['confirmPassword'],
