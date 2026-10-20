@@ -40,12 +40,12 @@ export default function PrescriptionView() {
   const sawUnpaid = useRef(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
 
-  // If the prescription is unpaid, auto-open the QR payment modal directly
+  // Unpaid and no receipt waiting for review: open the payment window straight away
   useEffect(() => {
-    if (rx && rx.status === 'unpaid') {
+    if (rx && rx.status === 'unpaid' && rx.payment_proof?.status !== 'pending') {
       setModalOpen(true);
     }
-  }, [rx?.status]);
+  }, [rx?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (rx?.status === 'unpaid') sawUnpaid.current = true;
@@ -54,9 +54,9 @@ export default function PrescriptionView() {
       setModalOpen(false);
       if (!rx.requires_pin || !rx.is_locked_by_pin) {
         setJustUnlocked(true);
-        toast.success('Payment received — your prescription is unlocked.');
+        toast.success('Your doctor confirmed your payment. Your prescription is open.');
       } else {
-        toast.success('Payment received! Please enter your doctor’s PIN to open your prescription.');
+        toast.success('Your doctor confirmed your payment. Enter the PIN they gave you to open it.');
       }
     }
   }, [rx?.status, rx?.requires_pin, rx?.is_locked_by_pin]);
@@ -198,12 +198,17 @@ export default function PrescriptionView() {
               <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
                 <Lock className="h-7 w-7" aria-hidden="true" />
               </span>
-              <h2 className="mt-3 text-xl font-semibold text-ink-900">Prescription locked</h2>
+              <h2 className="mt-3 text-xl font-semibold text-ink-900">
+                {rx.payment_proof?.status === 'pending' ? 'Waiting for your doctor' : 'Prescription locked'}
+              </h2>
               <p className="mt-1 text-sm text-ink-500">
                 {rx.medicine_count} medicine{rx.medicine_count === 1 ? '' : 's'} for <span className="font-medium text-ink-700">{rx.patient_hint}</span>
               </p>
+              {rx.payment_proof?.status === 'pending' && (
+                <p className="mt-2 text-sm text-ink-600">Your receipt was sent. This page opens your prescription once your doctor confirms the payment.</p>
+              )}
               <Button size="lg" className="mt-5 w-full" onClick={() => setModalOpen(true)}>
-                Pay {formatPeso(rx.amount)} to unlock
+                {rx.payment_proof?.status === 'pending' ? 'View payment status' : `Pay ${formatPeso(rx.amount)} to unlock`}
               </Button>
               {rx.requires_pin && (
                 <p className="mt-3 text-xs text-ink-400">

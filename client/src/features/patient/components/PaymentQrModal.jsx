@@ -1,210 +1,293 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { QRCodeSVG } from 'qrcode.react';
-import { AlertTriangle, FlaskConical, Loader2, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react';
+import { Copy, ImagePlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
-import { env } from '../../../config/env';
-import { formatPeso } from '../../../lib/utils';
-import { createPaymentSession, mockPay } from '../api';
+import { formatDateTime, formatPeso } from '../../../lib/utils';
+import { PROOF_MAX_BYTES, PROOF_TYPES, submitPaymentProof, uploadPaymentProof } from '../api';
+import { readReceipt } from '../ocr';
 
-function useCountdown(expiresAt) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!expiresAt) return undefined;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [expiresAt]);
-  return expiresAt ? Math.max(0, Math.floor((new Date(expiresAt).getTime() - now) / 1000)) : 0;
+const copy = async (text, what) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(`${what} copied`);
+  } catch {
+    toast.error('Could not copy. Please copy it by hand.');
+  }
+};
+
+/** A small O-shaped status dot, the brand's bullet. */
+const Dot = ({ tone = 'navy' }) => (
+  <span
+    aria-hidden="true"
+    className={`mt-1.5 inline-block h-3 w-2.5 shrink-0 rounded-[47%/35.6%] ${
+      { navy: 'bg-[#152839]', orange: 'bg-[#ff6f07]', slate: 'bg-[#5f6a7c]', ember: 'bg-[#b8470a]' }[tone]
+    }`}
+  />
+);
+
+function WaitingForDoctor({ rx, onClose }) {
+  const p = rx.payment_proof;
+  return (
+    <div className="space-y-5" role="status" aria-live="polite">
+      <div className="rounded-[20px] bg-[#ece7de] p-5">
+        <div className="flex items-start gap-3">
+          <Dot tone="orange" />
+          <div>
+            <p className="font-display text-lg font-semibold text-[#152839]">
+              Waiting for {rx.doctor?.full_name ?? 'your doctor'} to confirm your payment
+            </p>
+            <p className="mt-1 text-sm text-[#45546a]">
+              Sent {formatDateTime(p.submitted_at)}
+              {p.reference_end ? ` · reference ending ${p.reference_end}` : ''}
+            </p>
+          </div>
+        </div>
+      </div>
+      <p className="text-[15px] text-[#152839]">
+        Your doctor checks their e-wallet or bank app for your payment. This page opens your prescription by itself
+        once they confirm. You can close it and open the same link later.
+      </p>
+      <Button variant="primary" className="w-full" onClick={onClose}>Close</Button>
+    </div>
+  );
 }
-
-const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-
-/** QR payload: the gateway's QR/checkout string when live, otherwise the mock pay page URL. */
-const qrValueFor = (s) => s.qr_payload || `${window.location.origin}/mock-pay/${s.reference}`;
 
 export function PaymentQrModal({ open, onClose, rx }) {
   const qc = useQueryClient();
+  const methods = rx.payment_methods ?? [];
+  const [methodId, setMethodId] = useState(() => methods[0]?.id ?? null);
+  const method = methods.find((m) => m.id === methodId) ?? methods[0] ?? null;
 
-  const session = useMutation({
-    mutationFn: () => createPaymentSession(rx.id),
-    onError: () => toast.error('Could not start the payment. Please try again.'),
-  });
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState('');
+  const [reference, setReference] = useState('');
+  const [ocr, setOcr] = useState({ state: 'idle' }); // idle | reading | done | failed
+  const [error, setError] = useState('');
+  const fileInput = useRef(null);
+
+  const proof = rx.payment_proof;
+  const pending = proof?.status === 'pending';
+  const rejected = proof?.status === 'rejected';
 
   useEffect(() => {
-    if (open && !session.data && !session.isPending) session.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (!methodId && methods[0]) setMethodId(methods[0].id);
+  }, [methods, methodId]);
 
-  const simulate = useMutation({
-    mutationFn: () => mockPay(session.data.reference),
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  // After a successful submission the next poll shows "waiting"; clear the form for a possible resubmission.
+  useEffect(() => {
+    if (pending) { setFile(null); setPreview(''); setReference(''); setOcr({ state: 'idle' }); setError(''); }
+  }, [pending]);
+
+  const onPick = async (f) => {
+    setError('');
+    if (!f) return;
+    if (!PROOF_TYPES.includes(f.type)) return setError('Use a JPG, PNG or WebP screenshot.');
+    if (f.size > PROOF_MAX_BYTES) return setError('The screenshot must be 5 MB or smaller.');
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    setOcr({ state: 'reading' });
+    try {
+      const r = await readReceipt(f, rx.amount);
+      setOcr({ state: 'done', ...r });
+      if (r.reference && !reference) setReference(r.reference);
+    } catch {
+      setOcr({ state: 'failed' });
+    }
+  };
+
+  const send = useMutation({
+    mutationFn: async () => {
+      const path = await uploadPaymentProof(rx.id, file);
+      return submitPaymentProof({
+        rxId: rx.id,
+        reference: reference.trim(),
+        path,
+        methodId: method?.id,
+        amountRead: ocr.state === 'done' ? ocr.amount : null,
+      });
+    },
     onSuccess: () => {
-      onClose();
+      toast.success('Receipt sent. Your doctor will confirm your payment.');
       qc.invalidateQueries({ queryKey: ['rx'] });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => setError(e?.message || 'Could not send your receipt. Please try again.'),
   });
 
-  const customMethods = rx.payment_methods ?? [];
-  const [selectedMethodId, setSelectedMethodId] = useState(
-    () => customMethods[0]?.id || 'system'
-  );
+  const submit = (e) => {
+    e.preventDefault();
+    setError('');
+    const ref = reference.trim();
+    if (!/^[A-Za-z0-9 -]{6,40}$/.test(ref)) return setError('Enter the reference number exactly as it appears on your receipt.');
+    if (!file) return setError('Add a screenshot of your payment receipt.');
+    send.mutate();
+  };
 
-  const activeCustomMethod = customMethods.find((m) => m.id === selectedMethodId);
-  const s = session.data;
-  const remaining = useCountdown(s?.expires_at);
-  const expired = s && s.status !== 'paid' && (s.status === 'expired' || remaining <= 0);
+  const amountText = formatPeso(rx.amount);
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Pay to unlock your prescription"
-      description={`From ${rx.doctor?.full_name ?? 'your doctor'}`}
       size="md"
+      title={pending ? 'Payment sent' : `Pay ${amountText} to open your prescription`}
+      description={`From ${rx.doctor?.full_name ?? 'your doctor'}${rx.doctor?.clinic_name ? `, ${rx.doctor.clinic_name}` : ''}`}
     >
-      <div className="flex flex-col items-center text-center">
-        <p className="font-display text-4xl font-semibold text-ink-900">{formatPeso(rx.amount)}</p>
-        <p className="mt-1 text-sm text-ink-500">One-time fee · instant access</p>
-
-        {/* Doctor Bank / E-Wallet Tabs */}
-        {customMethods.length > 0 && (
-          <div className="mt-4 flex w-full flex-wrap justify-center gap-1.5 rounded-2xl bg-ink-100/70 p-1">
-            {customMethods.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setSelectedMethodId(m.id)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedMethodId === m.id
-                    ? 'bg-white text-ink-900 shadow-sm'
-                    : 'text-ink-600 hover:text-ink-900'
-                }`}
-              >
-                {m.provider}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setSelectedMethodId('system')}
-              className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                selectedMethodId === 'system'
-                  ? 'bg-white text-ink-900 shadow-sm'
-                  : 'text-ink-600 hover:text-ink-900'
-              }`}
-            >
-              QR Ph / Others
-            </button>
-          </div>
-        )}
-
-        <div className="relative mt-4">
-          <div className="rounded-3xl bg-gradient-to-br from-brand-400 via-brand-500 to-gold-400 p-[3px] shadow-glow">
-            <div className="relative rounded-[1.3rem] bg-white p-4">
-              {activeCustomMethod ? (
-                /* Doctor's Custom Uploaded QR Code */
-                <div className="flex flex-col items-center">
-                  <img
-                    src={activeCustomMethod.qr_image_url}
-                    alt={`${activeCustomMethod.provider} QR`}
-                    className="max-h-56 max-w-56 rounded-xl object-contain shadow-sm"
-                  />
-                  <div className="mt-3 w-full border-t border-ink-100 pt-2 text-center text-xs">
-                    <p className="font-semibold text-ink-800">{activeCustomMethod.account_name}</p>
-                    {activeCustomMethod.account_number && (
-                      <p className="mt-0.5 flex items-center justify-center gap-1 font-mono text-ink-600">
-                        <span>{activeCustomMethod.account_number}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(activeCustomMethod.account_number);
-                            toast.success('Account number copied!');
-                          }}
-                          className="text-brand-600 hover:text-brand-800"
-                          title="Copy account number"
-                        >
-                          Copy
-                        </button>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : !s ? (
-                /* Dynamic QR loading */
-                <div className="flex h-56 w-56 items-center justify-center" role="status" aria-label="Preparing QR code">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-                </div>
-              ) : (
-                /* System QR Code */
-                <>
-                  <QRCodeSVG
-                    value={qrValueFor(s)}
-                    size={224}
-                    level="M"
-                    fgColor="#0a101c"
-                    className={expired ? 'opacity-10 blur-sm' : ''}
-                    role="img"
-                    aria-label={`Payment QR code for ${formatPeso(rx.amount)}`}
-                  />
-                  {expired && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
-                      <AlertTriangle className="h-8 w-8 text-amber-500" aria-hidden="true" />
-                      <p className="font-semibold text-ink-900">QR code expired</p>
-                      <Button size="sm" onClick={() => session.mutate()} loading={session.isPending}>
-                        <RefreshCw className="h-4 w-4" aria-hidden="true" /> New QR code
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
+      {pending ? (
+        <WaitingForDoctor rx={rx} onClose={onClose} />
+      ) : methods.length === 0 ? (
+        <div className="rounded-[20px] bg-[#ece7de] p-5 text-[15px] text-[#152839]">
+          Your doctor has not added a payment QR yet. Please contact {rx.doctor?.full_name ?? 'your doctor'}
+          {rx.doctor?.phone ? ` at ${rx.doctor.phone}` : ''} to arrange payment.
+        </div>
+      ) : (
+        <form onSubmit={submit} noValidate className="space-y-7">
+          {rejected && (
+            <div role="alert" className="rounded-[18px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
+              <p className="font-semibold">Your doctor could not confirm your last payment</p>
+              {proof.reject_reason && <p className="mt-1">{proof.reject_reason}</p>}
+              <p className="mt-1">Check your receipt and send it again.</p>
             </div>
-          </div>
-        </div>
+          )}
 
-        {s && !expired && !activeCustomMethod && (
-          <p className="mt-3 text-sm text-ink-500" aria-live="polite">
-            QR expires in <span className="font-mono font-semibold text-ink-800">{mmss(remaining)}</span>
-          </p>
-        )}
+          {/* Pay */}
+          <section aria-labelledby="pay-h" className="space-y-4">
+            <h3 id="pay-h" className="font-display text-lg font-semibold text-[#152839]">Pay with your app</h3>
 
-        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-800 ring-1 ring-brand-100" role="status">
-          <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ring rounded-full bg-brand-500" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-brand-600" />
-          </span>
-          Waiting for payment… this page updates automatically.
-        </div>
+            {methods.length > 1 && (
+              <div role="group" aria-label="Payment method" className="flex flex-wrap gap-1.5 rounded-full bg-[#ece7de] p-1">
+                {methods.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={m.id === method?.id}
+                    onClick={() => setMethodId(m.id)}
+                    className={`min-h-[40px] flex-1 rounded-full px-4 text-sm font-semibold transition ${
+                      m.id === method?.id ? 'bg-[#152839] text-[#f9f8f3]' : 'text-[#152839] hover:bg-white'
+                    }`}
+                  >
+                    {m.provider}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        <ol className="mt-4 w-full space-y-2 text-left text-xs text-ink-600">
-          <li className="flex gap-2">
-            <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
-            <span>
-              Open {activeCustomMethod ? activeCustomMethod.provider : 'GCash, Maya or bank app'} and scan the QR code.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
-            <span>
-              Confirm the amount ({formatPeso(rx.amount)}). {rx.requires_pin ? 'After paying, enter the Doctor’s PIN to open your prescription.' : 'The prescription will automatically unlock.'}
-            </span>
-          </li>
-        </ol>
+            <div className="rounded-[22px] bg-[#f9f8f3] p-5">
+              <div className="mx-auto w-fit rounded-[18px] bg-white p-3">
+                <img
+                  src={method.qr_image_url}
+                  alt={`${method.provider} QR code for ${method.account_name}`}
+                  className="h-56 w-56 rounded-[12px] object-contain"
+                />
+              </div>
+              <dl className="mt-4 grid gap-3 text-[15px]">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-[#45546a]">{method.provider} account</dt>
+                  <dd className="text-right font-semibold text-[#152839]">{method.account_name}</dd>
+                </div>
+                {method.account_number && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-[#45546a]">Number</dt>
+                    <dd className="flex items-center gap-2 font-semibold tabular-nums text-[#152839]">
+                      {method.account_number}
+                      <button type="button" onClick={() => copy(method.account_number, 'Number')}
+                        className="inline-flex min-h-[36px] items-center gap-1 rounded-full bg-[#ece7de] px-3 text-sm font-semibold hover:bg-white">
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy
+                      </button>
+                    </dd>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-[#45546a]">Amount to pay</dt>
+                  <dd className="flex items-center gap-2 font-display text-xl font-bold tabular-nums text-[#152839]">
+                    {amountText}
+                    <button type="button" onClick={() => copy(Number(rx.amount).toFixed(2), 'Amount')}
+                      className="inline-flex min-h-[36px] items-center gap-1 rounded-full bg-[#ece7de] px-3 font-sans text-sm font-semibold hover:bg-white">
+                      <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copy
+                    </button>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+            <p className="text-sm text-[#45546a]">Scan the QR with {method.provider === 'GCash' || method.provider === 'Maya' ? method.provider : 'your bank or e-wallet app'} and pay exactly {amountText}. Keep the receipt screen open.</p>
+          </section>
 
-        {env.mockGateway && s && !expired && (
-          <div className="mt-6 w-full rounded-2xl border border-dashed border-amber-300 bg-amber-50/70 p-4 text-left">
-            <p className="flex items-center gap-2 text-sm font-semibold text-amber-800">
-              <FlaskConical className="h-4 w-4" aria-hidden="true" /> Test mode
-            </p>
-            <p className="mt-1 text-xs text-amber-800/80">
-              No real money is moved. This simulates the gateway sending a signed payment webhook.
-            </p>
-            <Button variant="dark" size="sm" className="mt-3" loading={simulate.isPending} onClick={() => simulate.mutate()}>
-              Simulate successful payment
+          {/* Proof */}
+          <section aria-labelledby="proof-h" className="space-y-4">
+            <div>
+              <h3 id="proof-h" className="font-display text-lg font-semibold text-[#152839]">Send your receipt</h3>
+              <p className="mt-1 text-sm text-[#45546a]">Take a screenshot of the receipt in your app and add it here.</p>
+            </div>
+
+            <input ref={fileInput} id="proof-file" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+              onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
+            {!file ? (
+              <label htmlFor="proof-file"
+                className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[20px] border-2 border-dashed border-[#c8d0db] bg-white p-5 text-center transition hover:border-[#152839]">
+                <ImagePlus className="h-6 w-6 text-[#152839]" aria-hidden="true" />
+                <span className="font-semibold text-[#152839]">Add receipt screenshot</span>
+                <span className="text-sm text-[#5f6a7c]">JPG, PNG or WebP, up to 5 MB</span>
+              </label>
+            ) : (
+              <div className="flex gap-4 rounded-[20px] bg-white p-3 ring-1 ring-[#dce1e8]">
+                <img src={preview} alt="Your receipt screenshot" className="h-28 w-20 shrink-0 rounded-[12px] object-cover" />
+                <div className="min-w-0 flex-1 space-y-2 py-1 text-sm">
+                  {ocr.state === 'reading' && (
+                    <p className="flex items-center gap-2 text-[#45546a]" role="status">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Reading your receipt…
+                    </p>
+                  )}
+                  {ocr.state === 'done' && (
+                    <ul className="space-y-1.5">
+                      <li className="flex gap-2"><Dot tone={ocr.reference ? 'navy' : 'slate'} />
+                        <span>{ocr.reference ? 'Reference number found' : 'Reference not found, please type it below'}</span></li>
+                      {ocr.amount != null && (
+                        <li className="flex gap-2"><Dot tone={ocr.amountMatches ? 'navy' : 'ember'} />
+                          <span className={ocr.amountMatches ? '' : 'text-[#7a2406]'}>
+                            {ocr.amountMatches ? `Amount ${formatPeso(ocr.amount)} matches` : `Receipt shows ${formatPeso(ocr.amount)}, the fee is ${amountText}`}
+                          </span></li>
+                      )}
+                    </ul>
+                  )}
+                  {ocr.state === 'failed' && <p className="text-[#45546a]">Could not read the receipt. Type the reference number below.</p>}
+                  <button type="button" className="font-semibold text-[#b8470a] hover:underline" onClick={() => fileInput.current?.click()}>
+                    Choose a different screenshot
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="proof-ref" className="mb-1.5 block text-sm font-medium text-[#152839]">
+                Reference number <span className="text-[#b8470a]" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="proof-ref"
+                value={reference}
+                onChange={(e) => { setReference(e.target.value); setError(''); }}
+                inputMode="text"
+                autoComplete="off"
+                placeholder="e.g. 1234 567 890123"
+                className="block min-h-[52px] w-full rounded-[16px] border border-[#dce1e8] bg-white px-4 text-[16px] tabular-nums text-[#152839] placeholder:text-[#5f6a7c] focus:border-[#152839] focus:outline-none focus:ring-2 focus:ring-[#ff6f07]/40"
+              />
+              <p className="mt-1.5 text-xs text-[#5f6a7c]">Shown as “Ref No.” or “Reference ID” on your receipt.</p>
+            </div>
+
+            {error && <div role="alert" className="rounded-[16px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">{error}</div>}
+
+            <Button type="submit" variant="primary" size="lg" className="w-full" loading={send.isPending}>
+              Send receipt to your doctor
             </Button>
-          </div>
-        )}
-      </div>
+            <p className="text-center text-xs text-[#5f6a7c]">
+              Only your doctor sees your receipt. Your prescription opens once they confirm the payment
+              {rx.requires_pin ? ' and you enter the PIN they gave you' : ''}.
+            </p>
+          </section>
+        </form>
+      )}
     </Modal>
   );
 }

@@ -4,6 +4,7 @@ import { Banknote, Clock3, FilePlus2, FileText } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { StatCard } from '../../../components/ui/Card';
 import { PrescriptionHistory } from '../components/PrescriptionHistory';
+import { PaymentsToConfirm } from '../components/PaymentsToConfirm';
 import { fetchMyPrescriptions } from '../api';
 import { useAuthStore } from '../../../store/authStore';
 import { doctorTitle, formatPeso } from '../../../lib/utils';
@@ -77,6 +78,8 @@ export default function DoctorDashboard() {
       </div>
 
       {/* Prescription history */}
+      <PaymentsToConfirm />
+
       <section aria-labelledby="history-h">
         <h2 id="history-h" className="mb-4 font-display text-xl font-semibold text-[#152839]">Prescription history</h2>
         {isError ? (

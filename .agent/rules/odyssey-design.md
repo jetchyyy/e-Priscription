@@ -254,11 +254,16 @@ The portal is a tool doctors work in every day, so it is quieter and denser than
 
 ### 11.6 Doctor and clinic details (`/doctor/profile`)
 
-- Two white panels: **Professional identity and licenses** (full name and degree, specialty, PRC, PTR, PDEA S2) and
-  **Clinic** (name, address, phone). Right column on desktop: a live preview of the letterhead as it prints on the
-  slip (the top of `RxSlip`).
-- Save with a navy "Save changes" in a sticky bar that appears only when something changed. Success is a toast
-  "Details saved". No Ody (licence data is sensitive, keep it plain).
+Built. Rules that must not be undone (enforced by `supabase/migrations/0004_verified_profile_and_rx_snapshot.sql`):
+
+- **Verified, change by request only after approval:** full name, PRC license no., specialty, PDEA S2 no. (and the
+  license file). Shown read-only with "Request a change", which opens a form; a name or PRC change needs a current PRC
+  ID. One open request at a time; the doctor can withdraw it. Administrators approve or reject in "Change requests" on
+  the admin page.
+- **Directly editable:** clinic name, clinic address, contact number, PTR no. ("Save changes").
+- **Prescriptions keep the letterhead they were issued with** (`prescriptions.doctor_snapshot`), as the FAQ and Terms
+  promise. Never render a prescription from the live profile.
+- Never add client code that writes `role`, `status`, `email` or verified fields; the database rejects it.
 
 ### 11.7 Payment QR codes (`/doctor/qr-codes`)
 
@@ -292,6 +297,17 @@ The portal is a tool doctors work in every day, so it is quieter and denser than
 Same shell with admin nav ("Doctor approvals"). Queue as a table: doctor, PRC no., specialty, submitted date, status,
 "Review". Review opens the licence image and Approve (navy) / Reject (light, asks for a reason) in a dialog.
 No Ody (security and verification screens).
+
+### 11.11 Payments (manual verification, built; gateway later)
+
+- Patient window (`features/patient/components/PaymentQrModal.jsx`): "Pay with your app" (doctor's QR, account,
+  amount with Copy) then "Send your receipt" (screenshot + reference number). OCR (`features/patient/ocr.js`,
+  Tesseract.js in the browser) only pre-fills the reference and flags an amount mismatch. Never unlock on OCR.
+- After sending: "Waiting for Dr. X to confirm your payment"; a rejection shows the doctor's reason and allows resubmit.
+- Doctor dashboard: "Payments to confirm" (`PaymentsToConfirm.jsx`) with the receipt, reference, "Payment received"
+  and "Not received" with a reason. Only `confirm_payment_proof` (the prescription's own doctor or an admin) marks a
+  prescription paid. Rules live in `supabase/migrations/0005_manual_payment_proofs.sql`; a reference number works once.
+- No Ody anywhere in the payment window (mascot rule: payment forms).
 
 ## 12. Tasks
 

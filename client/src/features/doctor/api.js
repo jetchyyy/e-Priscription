@@ -162,22 +162,32 @@ export async function fetchMyPrescriptions() {
   return data;
 }
 
-export async function updateDoctorProfile(values) {
+/** Fields an administrator verifies. Once a doctor is approved they change only through a change request. */
+export const VERIFIED_FIELDS = ['full_name', 'prc_no', 'specialty', 's2_no'];
+
+/**
+ * Saves the doctor's own details. When `verifiedLocked` is true (approved doctors) only the directly editable
+ * fields are sent; the database rejects changes to verified fields anyway.
+ */
+export async function updateDoctorProfile(values, { verifiedLocked = false } = {}) {
   const supabase = db();
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user.id;
   if (!userId) throw new Error('Your session expired. Please sign in again.');
 
   const clean = (v) => (v && String(v).trim() ? String(v).trim() : null);
-  const payload = {
-    full_name: values.fullName ? String(values.fullName).trim() : undefined,
-    specialty: clean(values.specialty),
-    prc_no: clean(values.prcNo),
+  const editable = {
     ptr_no: clean(values.ptrNo),
-    s2_no: clean(values.s2No),
     clinic_name: clean(values.clinicName),
     clinic_address: clean(values.clinicAddress),
     phone: clean(values.phone),
+  };
+  const payload = verifiedLocked ? editable : {
+    ...editable,
+    full_name: values.fullName ? String(values.fullName).trim() : undefined,
+    specialty: clean(values.specialty),
+    prc_no: clean(values.prcNo),
+    s2_no: clean(values.s2No),
   };
 
   // Remove undefined fields
@@ -273,3 +283,78 @@ export async function deletePaymentMethod(id) {
 }
 
 
+
+// ---------------------------------------------------------------------------------------------------------
+// Change requests for verified details (name, PRC no., specialty, S2 no.)
+// ---------------------------------------------------------------------------------------------------------
+
+/** Latest change requests for the signed-in doctor, newest first. */
+export async function fetchMyChangeRequests() {
+  const { data, error } = await db()
+    .from('profile_change_requests')
+    .select('id, changes, previous, reason, status, review_note, created_at, reviewed_at')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Sends a change request. `changes` uses database column names (see VERIFIED_FIELDS).
+ * A name or PRC number change needs `file`, a current PRC ID; it is stored in the doctor's private folder
+ * and attached to the request, not to the profile, until an administrator approves it.
+ */
+export async function requestProfileChange({ changes, reason, file }) {
+  const supabase = db();
+  let path = null;
+  if (file) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) throw new Error('Your session expired. Please sign in again.');
+    path = `${userId}/${Date.now()}-change-request.${EXT[file.type] ?? 'bin'}`;
+    const { error: upErr } = await supabase.storage.from('licenses').upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) throw upErr;
+  }
+  const { data, error } = await supabase.rpc('request_profile_change', {
+    p_changes: changes,
+    p_reason: reason || null,
+    p_license_path: path,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelProfileChange(id) {
+  const { error } = await db().rpc('cancel_profile_change', { p_id: id });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Manual payment verification: receipts patients sent for this doctor's prescriptions
+// ---------------------------------------------------------------------------------------------------------
+export async function fetchPendingPaymentProofs() {
+  const { data, error } = await db()
+    .from('payment_proofs')
+    .select('id, prescription_id, provider, reference_no, amount_read, screenshot_path, created_at, prescription:prescriptions(patient_name, amount, created_at)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+/** Short-lived link to a receipt screenshot (only this prescription's doctor can create it). */
+export async function getPaymentProofUrl(path) {
+  const { data, error } = await db().storage.from('payment-proofs').createSignedUrl(path, 300);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function confirmPaymentProof(id) {
+  const { error } = await db().rpc('confirm_payment_proof', { p_id: id });
+  if (error) throw error;
+}
+
+export async function rejectPaymentProof(id, reason) {
+  const { error } = await db().rpc('reject_payment_proof', { p_id: id, p_reason: reason || null });
+  if (error) throw error;
+}

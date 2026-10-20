@@ -72,6 +72,12 @@ const S = [
         <li>Do not share your account. Each physician must use their own account.</li>
         <li>Tell us at once at {LEGAL.email} if you suspect unauthorised access.</li>
         <li>Keep your profile, license and clinic details current. They appear on the prescriptions you issue.</li>
+        <li>
+          After approval, your name, PRC license number, specialty and PDEA S2 number can be changed only through a change
+          request that an administrator reviews, with supporting documents where needed. Your clinic name, address, contact
+          number and PTR number you may update yourself.
+        </li>
+        <li>Changes to your details apply to prescriptions issued afterwards. Prescriptions already issued keep the details they were issued with.</li>
       </ul>
     ),
   },
@@ -124,8 +130,18 @@ const S = [
           regulated by the Bangko Sentral ng Pilipinas and apply their own terms.
         </p>
         <p>
-          A prescription opens after payment is confirmed. If a payment is made but the prescription does not open, contact the
-          physician first, then us at {LEGAL.email} with the reference number.
+          After paying, the patient sends the payment reference number and a screenshot of the receipt through the Service.
+          The physician checks the payment in their own account and confirms it; only then does the prescription open. The
+          Service may read the screenshot automatically to fill in the form, but that reading is not proof of payment.
+        </p>
+        <ul>
+          <li>Physicians must confirm only payments they have actually received, and should review receipts promptly.</li>
+          <li>Patients must send genuine receipts. Submitting a fake or altered receipt, or reusing another person’s reference number, is prohibited and may be reported.</li>
+          <li>A reference number can be used for one prescription only.</li>
+        </ul>
+        <p>
+          If a payment is made but the prescription does not open, contact the physician first, then us at {LEGAL.email} with
+          the reference number.
         </p>
       </>
     ),

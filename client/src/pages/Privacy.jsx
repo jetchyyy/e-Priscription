@@ -47,6 +47,7 @@ const S = [
         <ul>
           <li>Name, email, password (stored only as a secure hash), contact number.</li>
           <li>PRC license number and a copy of the license, PTR number, PDEA S2 license number if given, specialty.</li>
+          <li>Requests to change verified details, with the reason and any supporting document you upload, and the administrator’s decision.</li>
           <li>Clinic or hospital name and address, shown on the prescriptions you issue.</li>
           <li>Payment QR codes, provider, account name and number you choose to add, so patients can pay you.</li>
           <li>Plan, billing and transaction records.</li>
@@ -63,6 +64,12 @@ const S = [
         <h3>When a patient opens a link</h3>
         <ul>
           <li>Payment status, amount, payment reference and time of payment. We do not receive card numbers or e-wallet passwords; the payment provider handles those.</li>
+          <li>
+            The reference number and the receipt screenshot the patient sends as proof of payment. A screenshot may show the
+            payer’s name and part of their mobile or account number. It is read on the patient’s own device to fill in the
+            form, stored privately, and shown only to the prescribing physician (and our administrators when resolving a
+            dispute).
+          </li>
           <li>The time the prescription was opened, and whether a security PIN was entered correctly.</li>
         </ul>
         <h3>Technical information</h3>
@@ -134,7 +141,8 @@ const S = [
           <li>An unpaid prescription link returns only a masked preview. The full prescription is not sent until payment is confirmed.</li>
           <li>An optional security PIN that the physician gives the patient in person.</li>
           <li>Licenses kept in private storage, readable only by the physician and our administrators through short-lived links.</li>
-          <li>Prescriptions cannot be edited after they are issued.</li>
+          <li>Prescriptions cannot be edited after they are issued, and each keeps a copy of the physician’s details as they were at that moment.</li>
+          <li>Verified credentials (name, PRC, specialty, S2) can change only after an administrator reviews a request.</li>
           <li>Staff access only on a need-to-know basis, under confidentiality obligations.</li>
         </ul>
         <p>
@@ -157,6 +165,7 @@ const S = [
         </li>
         <li><strong>Physician account and license data</strong>: while the account is active, and up to [period] after closure for legal and dispute purposes.</li>
         <li><strong>Billing and payment records</strong>: for the period required by tax and accounting laws.</li>
+        <li><strong>Receipt screenshots sent as proof of payment</strong>: up to [period] after the payment is confirmed or rejected, then deleted.</li>
         <li><strong>Security logs</strong>: up to [period], unless needed for an investigation.</li>
       </ul>
     ),

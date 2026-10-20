@@ -7,6 +7,7 @@ import { cn } from '../../../lib/utils';
 import { DoctorTable } from '../components/DoctorTable';
 import { DoctorCard } from '../components/DoctorCard';
 import { ApprovalModal } from '../components/ApprovalModal';
+import { ChangeRequests } from '../components/ChangeRequests';
 import { fetchDoctors } from '../api';
 
 const TABS = [
@@ -125,6 +126,8 @@ export default function AdminDashboard() {
           </ul>
         </>
       )}
+
+      <ChangeRequests />
 
       <ApprovalModal doctor={selected} onClose={() => setSelectedId(null)} />
     </div>

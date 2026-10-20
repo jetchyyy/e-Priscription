@@ -11,7 +11,7 @@ import { PLANS, peso } from '../features/marketing/plans';
 function SentPanel({ state, simulate }) {
   const status = {
     waiting: ['Waiting for payment', '₱50 access fee · link sent by Viber at 10:31 AM'],
-    checking: ['Checking payment…', 'Matching the GCash reference'],
+    checking: ['Receipt received', 'GCash ref. 1234 567 890123 · you confirm it in your app'],
     paid: ['Paid · prescription open', 'GCash ₱50 at 10:42 AM · opened on the patient’s phone'],
   }[state];
 
@@ -89,7 +89,7 @@ function Hero() {
 const TRIP = [
   ['written', 'First you write it.', 'Patient, medicines by generic name, strength, quantity and Sig, with your PRC and PTR numbers.'],
   ['sent', 'Then it goes as a link.', 'Copy it into Viber, Messenger or SMS. Until it is paid the server sends only a masked preview.'],
-  ['paid', 'Your patient pays to open it.', 'They scan your QR with GCash, Maya or a bank app. The Rx opens on their phone, no refresh.'],
+  ['paid', 'Your patient pays to open it.', 'They pay your QR with GCash, Maya or a bank app and send the receipt. You confirm it, and the Rx opens on their phone.'],
   ['filled', 'The pharmacy reads it in full.', 'The patient shows it on screen or prints it. Your signature and license numbers stay on it.'],
 ];
 
@@ -297,7 +297,7 @@ function Patients() {
         <ul className="patients__steps" data-reveal style={{ '--i': 3 }}>
           <li><span className="o-dot" style={{ '--c': 'var(--navy)' }} aria-hidden="true" />You see your doctor’s name and the fee before you pay.</li>
           <li><span className="o-dot" style={{ '--c': 'var(--orange)' }} aria-hidden="true" />Pay with GCash, Maya or your bank app by scanning the QR.</li>
-          <li><span className="o-dot" style={{ '--c': 'var(--harbor)' }} aria-hidden="true" />The prescription opens by itself. Show it or print it at the pharmacy.</li>
+          <li><span className="o-dot" style={{ '--c': 'var(--harbor)' }} aria-hidden="true" />Send the receipt. Your prescription opens as soon as your doctor confirms the payment.</li>
         </ul>
       </div>
       <figure className="patients__photo" data-reveal style={{ '--i': 1 }} aria-label="What the patient sees before paying">
@@ -314,7 +314,9 @@ const QUESTIONS = [
   ['Is an e-prescription valid at Philippine pharmacies?', 'The slip follows the Philippine Rx layout with your PRC and PTR numbers and generic names. Check current PRC, DOH and FDA rules for your specialty, and keep dangerous drugs that need an S2 yellow prescription on paper.'],
   ['Who receives the access fee?', 'You do. Patients pay the fee you set into the GCash, Maya or bank QR you uploaded. Your plan is billed separately.'],
   ['What does the patient see before paying?', 'Your name, the clinic and the fee. The medicines, diagnosis and full patient name are not sent to their phone until payment is confirmed.'],
+  ['How is the patient’s payment confirmed?', 'For now, by you. Your patient pays your QR and sends the reference number and a screenshot of the receipt. You check the payment in your own e-wallet or bank app and tap “Payment received”, and the prescription opens on their phone. Automatic confirmation through a payment gateway is planned.'],
   ['Can I change a prescription after sending it?', 'No. Prescriptions cannot be edited once issued, so the pharmacy sees exactly what you signed. Write a new one if something changes.'],
+  ['Can I change my name or PRC number after I am approved?', 'Your name, PRC license number, specialty and S2 number are checked by an administrator, so after approval you change them through a request with your current PRC ID. Clinic name, address, contact number and PTR you can update yourself at any time. Prescriptions you already sent keep the details they were issued with.'],
   ['How long does approval take?', 'An administrator reviews your PRC license after you register. You can sign in while you wait and see your status.'],
   ['What happens to patient data?', 'It is stored with row-level security, licenses sit in private storage and prescription content is never logged, in line with the Data Privacy Act (RA 10173).'],
   ['Can my clinic staff use it?', 'On the Clinic plan up to five doctors share one account and a clinic admin can see everyone’s history and reports.'],
