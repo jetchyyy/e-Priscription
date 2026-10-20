@@ -42,8 +42,6 @@ export const router = createBrowserRouter([
       { path: '/pricing', element: <Pricing /> },
       { path: '/sample', element: <SampleRx /> },
       { path: '/login', element: <LoginPage /> },
-      { path: '/admin/login', element: <AdminLoginPage /> },
-      { path: '/admin-login', element: <AdminLoginPage /> },
 
       // Patient portal (public, no login)
       { path: '/rx/:id', element: <PrescriptionView /> },

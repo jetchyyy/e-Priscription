@@ -17,7 +17,6 @@ export default function LoginPage() {
         <>
           <p>New doctor? <Link to="/doctor/register" className="link">Register with your PRC license</Link></p>
           <p>Patient? Open the link your doctor sent. You do not need an account.</p>
-          <p><Link to="/admin/login" className="link">Administrator sign in</Link></p>
         </>
       )}
     >
