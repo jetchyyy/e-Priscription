@@ -53,6 +53,7 @@ model Prescription {
   notes          String?
   medicines      Json
   amount         Decimal   @db.Decimal(10, 2)
+  pin            String?   @map("pin")
   paymentStatus  String    @default("unpaid") @map("payment_status")
   paidAt         DateTime? @map("paid_at")
   createdAt      DateTime  @default(now()) @map("created_at")

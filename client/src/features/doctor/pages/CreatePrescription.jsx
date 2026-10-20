@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ExternalLink, IdCard, Plus } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, IdCard, KeyRound, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -16,9 +16,11 @@ import { useAuthStore } from '../../../store/authStore';
 import { env } from '../../../config/env';
 import { doctorTitle, formatPeso, rxLink } from '../../../lib/utils';
 
+const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
+
 const defaults = () => ({
   patientName: '', patientSex: '', patientDob: '', patientContact: '', patientAddress: '',
-  diagnosis: '', notes: '', amount: env.defaultFee, medicines: [{ ...emptyMedicine }],
+  diagnosis: '', notes: '', amount: env.defaultFee, pin: generatePin(), medicines: [{ ...emptyMedicine }],
 });
 
 function Section({ number, title, children }) {
@@ -39,7 +41,7 @@ export default function CreatePrescription() {
   const [created, setCreated] = useState(null);
 
   const {
-    register, control, handleSubmit, watch, reset,
+    register, control, handleSubmit, watch, reset, setValue,
     formState: { errors },
   } = useForm({ resolver: zodResolver(prescriptionSchema), defaultValues: defaults() });
 
@@ -47,7 +49,7 @@ export default function CreatePrescription() {
     mutationFn: createPrescription,
     onSuccess: (id, values) => {
       qc.invalidateQueries({ queryKey: ['doctor', 'prescriptions'] });
-      setCreated({ id, patient: values.patientName, amount: values.amount });
+      setCreated({ id, patient: values.patientName, amount: values.amount, pin: values.pin });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     onError: (e) => toast.error(e?.message || 'Could not create the prescription. Please try again.'),
@@ -70,7 +72,35 @@ export default function CreatePrescription() {
               className="w-full bg-transparent px-2 py-2 text-center font-mono text-sm text-ink-800 focus:outline-none" />
           </div>
 
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-left">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                  <KeyRound className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-800">Prescription Security PIN</p>
+                  <p className="font-mono text-2xl font-bold tracking-widest text-ink-900">{created.pin}</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(created.pin);
+                  toast.success('PIN copied to clipboard');
+                }}
+              >
+                <Copy className="h-4 w-4" /> Copy PIN
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-amber-900/80">
+              <strong>Share this PIN with your patient:</strong> After paying {formatPeso(created.amount)}, the patient will be prompted to enter this PIN to open and view the E-prescription.
+            </p>
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <CopyLinkButton link={link} size="lg" variant="primary" />
             <ShareLinkButton link={link} size="lg" />
             <a href={link} target="_blank" rel="noreferrer">
@@ -153,11 +183,61 @@ export default function CreatePrescription() {
         <MedicineFields control={control} register={register} errors={errors} watch={watch} />
       </Section>
 
-      <Section number="4" title="Access fee">
-        <div className="max-w-xs">
-          <Input label="Fee the patient pays to unlock (₱)" type="number" inputMode="decimal" step="1" min="20" max="5000"
-            hint="Between ₱20 and ₱5,000" error={errors.amount?.message}
-            {...register('amount', { valueAsNumber: true })} />
+      <Section number="4" title="Payment Fee & Security PIN">
+        <p className="mb-4 text-xs text-ink-500">
+          Set the fee and an unlock PIN. Once the patient pays via QR code, they must enter this PIN to open and view the E-prescription.
+        </p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <Input
+              label="Fee the patient pays to unlock (₱)"
+              type="number"
+              inputMode="decimal"
+              step="1"
+              min="20"
+              max="5000"
+              hint="Between ₱20 and ₱5,000"
+              error={errors.amount?.message}
+              {...register('amount', { valueAsNumber: true })}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-700">
+              Prescription Security PIN
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                maxLength={6}
+                inputMode="numeric"
+                placeholder="4-6 digits"
+                className={`w-full rounded-xl border bg-white px-3.5 py-2.5 font-mono text-base font-bold tracking-widest text-ink-900 shadow-sm transition placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:outline-none focus:ring-2 ${
+                  errors.pin
+                    ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'
+                    : 'border-ink-200 focus:border-brand-500 focus:ring-brand-100'
+                }`}
+                {...register('pin')}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setValue('pin', generatePin(), { shouldValidate: true })}
+                title="Generate new 4-digit PIN"
+                className="shrink-0"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Random PIN</span>
+              </Button>
+            </div>
+            {errors.pin ? (
+              <p className="mt-1.5 text-xs text-rose-600">{errors.pin.message}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-ink-500">
+                4 to 6 digit PIN. Share this with the patient so they can open their prescription after payment.
+              </p>
+            )}
+          </div>
         </div>
       </Section>
 

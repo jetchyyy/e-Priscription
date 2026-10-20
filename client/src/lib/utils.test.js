@@ -6,7 +6,7 @@ const validMedicine = {
   genericName: 'Amoxicillin', brandName: '', strength: '500 mg', form: 'Capsule', quantity: '21',
   dose: '1 capsule', frequency: 'three times a day', duration: '7 days', instructions: '',
 };
-const validRx = { patientName: 'Juan Santos', amount: 50, medicines: [validMedicine] };
+const validRx = { patientName: 'Juan Santos', amount: 50, pin: '1234', medicines: [validMedicine] };
 
 describe('buildSig', () => {
   it('composes a Philippine-style Sig line', () => {
@@ -44,6 +44,13 @@ describe('prescriptionSchema', () => {
   it('limits the fee range', () => {
     expect(prescriptionSchema.safeParse({ ...validRx, amount: 5 }).success).toBe(false);
     expect(prescriptionSchema.safeParse({ ...validRx, amount: 9999 }).success).toBe(false);
+  });
+  it('validates PIN format (4 to 6 digits)', () => {
+    expect(prescriptionSchema.safeParse({ ...validRx, pin: '1234' }).success).toBe(true);
+    expect(prescriptionSchema.safeParse({ ...validRx, pin: '123456' }).success).toBe(true);
+    expect(prescriptionSchema.safeParse({ ...validRx, pin: '12' }).success).toBe(false);
+    expect(prescriptionSchema.safeParse({ ...validRx, pin: 'abcd' }).success).toBe(false);
+    expect(prescriptionSchema.safeParse({ ...validRx, pin: '' }).success).toBe(false);
   });
   it('validates PH phone numbers', () => {
     expect(prescriptionSchema.safeParse({ ...validRx, patientContact: '0917 123 4567' }).success).toBe(true);

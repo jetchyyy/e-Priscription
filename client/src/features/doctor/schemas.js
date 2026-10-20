@@ -75,6 +75,10 @@ export const prescriptionSchema = z.object({
     .number({ invalid_type_error: 'Enter an amount' })
     .min(20, 'Minimum fee is ₱20')
     .max(5000, 'Maximum fee is ₱5,000'),
+  pin: z
+    .string()
+    .trim()
+    .regex(/^\d{4,6}$/, 'PIN must be 4 to 6 digits'),
   medicines: z.array(medicineSchema).min(1, 'Add at least one medicine').max(15, 'Maximum of 15 medicines'),
 });
 

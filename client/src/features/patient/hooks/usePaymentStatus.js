@@ -8,10 +8,10 @@ const POLL_MS = 3000;
  * When the webhook marks it paid, the next poll returns the full content
  * and the page reveals it automatically.
  */
-export function usePaymentStatus(id, enabled = true, userId = null) {
+export function usePaymentStatus(id, enabled = true, userId = null, pin = null) {
   return useQuery({
-    queryKey: ['rx', id, userId],
-    queryFn: () => fetchRx(id),
+    queryKey: ['rx', id, userId, pin],
+    queryFn: () => fetchRx(id, pin),
     enabled,
     retry: 1,
     staleTime: 0,

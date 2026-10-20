@@ -186,7 +186,7 @@ export function PaymentQrModal({ open, onClose, rx }) {
           <li className="flex gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
             <span>
-              Confirm the amount ({formatPeso(rx.amount)}). The prescription will automatically unlock.
+              Confirm the amount ({formatPeso(rx.amount)}). {rx.requires_pin ? 'After paying, enter the Doctor’s PIN to open your prescription.' : 'The prescription will automatically unlock.'}
             </span>
           </li>
         </ol>

@@ -134,6 +134,7 @@ export async function createPrescription(values) {
       diagnosis: clean(values.diagnosis),
       notes: clean(values.notes),
       amount: values.amount,
+      pin: clean(values.pin),
       medicines: values.medicines.map((m) => ({
         genericName: m.genericName.trim(),
         brandName: m.brandName?.trim() ?? '',
@@ -155,7 +156,7 @@ export async function createPrescription(values) {
 export async function fetchMyPrescriptions() {
   const { data, error } = await db()
     .from('prescriptions')
-    .select('id, patient_name, diagnosis, amount, payment_status, created_at, paid_at')
+    .select('id, patient_name, diagnosis, amount, pin, payment_status, created_at, paid_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;

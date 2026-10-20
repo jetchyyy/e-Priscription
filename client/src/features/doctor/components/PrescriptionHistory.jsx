@@ -51,6 +51,7 @@ export function PrescriptionHistory({ items, loading }) {
               <th scope="col" className="px-5 py-3 font-semibold">Patient</th>
               <th scope="col" className="px-5 py-3 font-semibold">Issued</th>
               <th scope="col" className="px-5 py-3 font-semibold">Fee</th>
+              <th scope="col" className="px-5 py-3 font-semibold">PIN</th>
               <th scope="col" className="px-5 py-3 font-semibold">Status</th>
               <th scope="col" className="px-5 py-3 font-semibold"><span className="sr-only">Actions</span></th>
             </tr>
@@ -64,6 +65,15 @@ export function PrescriptionHistory({ items, loading }) {
                 </td>
                 <td className="px-5 py-3.5 text-ink-600">{formatShortDate(rx.created_at)}</td>
                 <td className="px-5 py-3.5 text-ink-600">{formatPeso(rx.amount)}</td>
+                <td className="px-5 py-3.5">
+                  {rx.pin ? (
+                    <span className="inline-flex items-center rounded-lg bg-amber-50 px-2 py-1 font-mono text-xs font-bold text-amber-800 ring-1 ring-amber-200" title="Security PIN for patient unlock">
+                      {rx.pin}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-400">—</span>
+                  )}
+                </td>
                 <td className="px-5 py-3.5"><PaymentBadge status={rx.payment_status} /></td>
                 <td className="px-5 py-3.5"><Actions id={rx.id} /></td>
               </tr>
@@ -79,7 +89,14 @@ export function PrescriptionHistory({ items, loading }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-ink-900">{rx.patient_name}</p>
-                  <p className="text-xs text-ink-500">{formatShortDate(rx.created_at)} · {formatPeso(rx.amount)}</p>
+                  <p className="text-xs text-ink-500">
+                    {formatShortDate(rx.created_at)} · {formatPeso(rx.amount)}
+                    {rx.pin && (
+                      <span className="ml-1.5 inline-block font-mono font-bold text-amber-800">
+                        (PIN: {rx.pin})
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <PaymentBadge status={rx.payment_status} />
               </div>

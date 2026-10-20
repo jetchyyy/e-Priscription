@@ -13,15 +13,26 @@ import { usePaymentStatus } from '../hooks/usePaymentStatus';
 import { BlurredPrescription } from '../components/BlurredPrescription';
 import { PaymentQrModal } from '../components/PaymentQrModal';
 import { PrescriptionContent } from '../components/PrescriptionContent';
+import { PinUnlockCard } from '../components/PinUnlockCard';
 
 export default function PrescriptionView() {
   const { id } = useParams();
   const valid = RX_ID_PATTERN.test(id ?? '');
   const { session, loading: authLoading } = useAuthStore();
+
+  const [enteredPin, setEnteredPin] = useState(() => {
+    try {
+      return sessionStorage.getItem(`rx_pin_${id}`) || '';
+    } catch (_) {
+      return '';
+    }
+  });
+
   const { data: rx, isLoading: rxLoading, isError, refetch, isFetching } = usePaymentStatus(
     id,
     valid && !authLoading,
-    session?.user?.id
+    session?.user?.id,
+    enteredPin || null
   );
   const isLoading = rxLoading || (authLoading && valid);
 
@@ -41,10 +52,14 @@ export default function PrescriptionView() {
     if (rx?.status === 'paid' && sawUnpaid.current) {
       sawUnpaid.current = false;
       setModalOpen(false);
-      setJustUnlocked(true);
-      toast.success('Payment received — your prescription is unlocked.');
+      if (!rx.requires_pin || !rx.is_locked_by_pin) {
+        setJustUnlocked(true);
+        toast.success('Payment received — your prescription is unlocked.');
+      } else {
+        toast.success('Payment received! Please enter your doctor’s PIN to open your prescription.');
+      }
     }
-  }, [rx?.status]);
+  }, [rx?.status, rx?.requires_pin, rx?.is_locked_by_pin]);
 
   if (!valid || (!isLoading && !isError && rx === null)) {
     return (
@@ -85,7 +100,8 @@ export default function PrescriptionView() {
 
   const paid = rx.status === 'paid';
   const isDoctorPreview = Boolean(rx.is_doctor_preview);
-  const canView = paid || isDoctorPreview;
+  const isLockedByPin = paid && Boolean(rx.is_locked_by_pin);
+  const canView = (paid && !isLockedByPin) || isDoctorPreview;
 
   return (
     <PublicLayout maxWidth="max-w-3xl">
@@ -97,7 +113,7 @@ export default function PrescriptionView() {
           <p className="text-sm text-ink-500">
             {isDoctorPreview
               ? 'This is how your prescription appears to the patient once unlocked.'
-              : paid
+              : paid && !isLockedByPin
               ? 'Show this to your pharmacist or keep a copy.'
               : `Issued by ${rx.doctor?.full_name ?? 'your doctor'}`}
           </p>
@@ -125,10 +141,26 @@ export default function PrescriptionView() {
             <div>
               <p className="text-sm font-semibold">Prescribing Doctor Preview</p>
               <p className="text-xs text-brand-700">
-                Status: <strong>Unpaid ({formatPeso(rx.amount)})</strong>. Patients will be prompted to pay via QR before viewing.
+                Status: <strong>Unpaid ({formatPeso(rx.amount)})</strong>. Patients will be prompted to pay via QR and enter the PIN before viewing.
               </p>
             </div>
           </div>
+          {rx.pin && (
+            <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-xs ring-1 ring-brand-200">
+              <span className="font-semibold text-brand-900">Security PIN:</span>
+              <span className="font-mono font-bold tracking-wider text-brand-700">{rx.pin}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {rx.is_owner && rx.pin && paid && (
+        <div role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ink-50 px-4 py-2.5 text-xs text-ink-800 ring-1 ring-ink-200">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-ink-600">Prescription Security PIN:</span>
+            <span className="font-mono font-bold text-ink-900">{rx.pin}</span>
+          </div>
+          <span className="text-ink-500">Required for patient to open after payment</span>
         </div>
       )}
 
@@ -136,11 +168,28 @@ export default function PrescriptionView() {
         <>
           {justUnlocked && (
             <div role="status" className="mb-4 flex animate-pop items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200">
-              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" /> Payment confirmed. Prescription unlocked.
+              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {isLockedByPin ? 'Prescription unlocked.' : 'Prescription unlocked successfully.'}
             </div>
           )}
           <PrescriptionContent rx={rx} animate={justUnlocked} />
         </>
+      ) : isLockedByPin ? (
+        <div className="relative">
+          <BlurredPrescription rx={rx} />
+          <div className="absolute inset-0 px-2 pt-8 sm:px-0">
+            <PinUnlockCard
+              rx={rx}
+              onUnlocked={(pin) => {
+                setEnteredPin(pin);
+                try {
+                  sessionStorage.setItem(`rx_pin_${id}`, pin);
+                } catch (_) {}
+                setJustUnlocked(true);
+              }}
+            />
+          </div>
+        </div>
       ) : (
         <div className="relative">
           <BlurredPrescription rx={rx} />
@@ -156,6 +205,11 @@ export default function PrescriptionView() {
               <Button size="lg" className="mt-5 w-full" onClick={() => setModalOpen(true)}>
                 Pay {formatPeso(rx.amount)} to unlock
               </Button>
+              {rx.requires_pin && (
+                <p className="mt-3 text-xs text-ink-400">
+                  Doctor's PIN will be required after payment to open.
+                </p>
+              )}
             </div>
           </div>
         </div>

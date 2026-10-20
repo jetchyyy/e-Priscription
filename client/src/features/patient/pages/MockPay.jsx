@@ -53,7 +53,7 @@ export default function MockPay() {
             <div className="animate-pop">
               <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" aria-hidden="true" />
               <h1 className="mt-3 text-2xl font-semibold">Payment sent</h1>
-              <p className="mt-1 text-sm text-ink-500">Your prescription unlocks automatically on the other device.</p>
+              <p className="mt-1 text-sm text-ink-500">Payment received! Open your prescription and enter your Doctor’s PIN to view.</p>
               <Link to={`/rx/${session.prescription_id}`}>
                 <Button className="mt-6 w-full" size="lg">Open my prescription</Button>
               </Link>
