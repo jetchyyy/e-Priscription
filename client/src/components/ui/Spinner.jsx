@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 export function Spinner({ className, label = 'Loading' }) {
   return (
     <span role="status" className={cn('inline-flex items-center', className)}>
-      <Loader2 className="h-5 w-5 animate-spin text-brand-600" aria-hidden="true" />
+      <Loader2 className="h-5 w-5 animate-spin text-[#152839]" aria-hidden="true" />
       <span className="sr-only">{label}</span>
     </span>
   );

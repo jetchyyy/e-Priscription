@@ -4,17 +4,23 @@ import { cn } from '../../lib/utils';
 
 const variants = {
   primary:
-    'bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-glow hover:from-brand-400 hover:to-brand-600 active:scale-[.98]',
-  secondary: 'bg-white text-ink-800 ring-1 ring-inset ring-ink-200 hover:bg-ink-50 active:scale-[.98]',
-  ghost: 'text-ink-700 hover:bg-ink-100 active:scale-[.98]',
-  danger: 'bg-rose-600 text-white shadow-[0_8px_20px_-6px_rgb(225_29_72/.5)] hover:bg-rose-500 active:scale-[.98]',
-  dark: 'bg-ink-900 text-white hover:bg-ink-800 active:scale-[.98]',
+    'bg-[#152839] text-[#f9f8f3] hover:bg-[#22405a] active:scale-[.98]',
+  accent:
+    'bg-[#ff6f07] text-[#152839] hover:bg-[#ff8a33] active:scale-[.98]',
+  secondary:
+    'bg-[#ece7de] text-[#152839] hover:bg-[#ffffff] border border-[#dce1e8] active:scale-[.98]',
+  ghost:
+    'text-[#45546a] hover:text-[#152839] hover:underline underline-offset-4 active:scale-[.98]',
+  danger:
+    'bg-[#fbe9e1] text-[#7a2406] border border-[#f3c2af] hover:bg-[#f7d6c8] active:scale-[.98]',
+  dark:
+    'bg-[#152839] text-[#f9f8f3] hover:bg-[#0d1b28] active:scale-[.98]',
 };
 
 const sizes = {
-  sm: 'min-h-10 px-3.5 text-sm gap-1.5',
-  md: 'min-h-11 px-5 text-[15px] gap-2',
-  lg: 'min-h-12 px-7 text-base gap-2',
+  sm: 'min-h-[40px] px-4 text-sm gap-1.5',
+  md: 'min-h-[48px] px-6 text-[15px] gap-2',
+  lg: 'min-h-[52px] px-8 text-base gap-2',
 };
 
 export const Button = forwardRef(function Button(
@@ -27,7 +33,7 @@ export const Button = forwardRef(function Button(
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex select-none items-center justify-center rounded-xl font-semibold transition duration-150',
+        'inline-flex select-none items-center justify-center rounded-full font-semibold transition duration-150',
         'disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none',
         variants[variant],
         sizes[size],

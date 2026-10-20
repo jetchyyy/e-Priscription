@@ -3,23 +3,23 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const control =
-  'block w-full rounded-xl border bg-white px-3.5 min-h-11 text-[15px] text-ink-900 placeholder:text-ink-400 ' +
-  'transition focus:outline-none focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500 disabled:bg-ink-50 disabled:text-ink-500';
+  'block w-full rounded-[18px] border border-[#dce1e8] bg-white px-4 min-h-[48px] text-[15px] text-[#152839] placeholder:text-[#5f6a7c] ' +
+  'transition focus:outline-none focus:border-[#ff6f07] focus:ring-2 focus:ring-[#ff6f07]/20 disabled:bg-[#ece7de] disabled:text-[#5f6a7c]';
 
 function Field({ id, label, error, hint, required, className, children }) {
   return (
     <div className={cn('w-full', className)}>
       {label && (
-        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink-700">
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-[#152839]">
           {label}
-          {required && <span className="ml-0.5 text-rose-500" aria-hidden="true">*</span>}
+          {required && <span className="ml-0.5 text-[#b8470a]" aria-hidden="true">*</span>}
         </label>
       )}
       {children}
       {error ? (
-        <p id={`${id}-err`} role="alert" className="mt-1.5 text-sm text-rose-600">{error}</p>
+        <p id={`${id}-err`} role="alert" className="mt-1.5 text-sm text-[#b8470a]">{error}</p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1.5 text-xs text-ink-500">{hint}</p>
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-[#5f6a7c]">{hint}</p>
       ) : null}
     </div>
   );

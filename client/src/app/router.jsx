@@ -7,6 +7,7 @@ import { RouteErrorFallback } from '../components/ui/ErrorBoundary';
 
 // Each portal is its own chunk.
 const Landing = lazy(() => import('../pages/Landing'));
+const Pricing = lazy(() => import('../pages/Pricing'));
 const SampleRx = lazy(() => import('../pages/SampleRx'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorFallback />,
     children: [
       { path: '/', element: <Landing /> },
+      { path: '/pricing', element: <Pricing /> },
       { path: '/sample', element: <SampleRx /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/admin/login', element: <AdminLoginPage /> },

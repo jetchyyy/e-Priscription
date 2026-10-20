@@ -1,23 +1,39 @@
 import { cn } from '../../lib/utils';
 
 const tones = {
-  neutral: 'bg-ink-100 text-ink-700 ring-ink-200',
-  success: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  warning: 'bg-amber-50 text-amber-700 ring-amber-200',
-  danger: 'bg-rose-50 text-rose-700 ring-rose-200',
-  info: 'bg-brand-50 text-brand-700 ring-brand-200',
+  neutral: 'text-[#45546a]',
+  success: 'text-[#152839]',
+  warning: 'text-[#b8470a]',
+  danger: 'text-[#a3330a]',
+  info: 'text-[#152839]',
+};
+
+const dotColors = {
+  neutral: 'bg-[#5f6a7c]',
+  success: 'bg-[#152839]',
+  warning: 'bg-[#ff6f07]',
+  danger: 'bg-[#b8470a]',
+  info: 'bg-[#152839]',
 };
 
 export function Badge({ tone = 'neutral', className, children, dot = true }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium',
         tones[tone],
         className,
       )}
     >
-      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}
+      {dot && (
+        <span
+          className={cn(
+            'inline-block h-2 w-1.5 rounded-[47%/35.6%]',
+            dotColors[tone] || 'bg-[#152839]',
+          )}
+          aria-hidden="true"
+        />
+      )}
       {children}
     </span>
   );
@@ -35,5 +51,9 @@ export function DoctorStatusBadge({ status }) {
 }
 
 export function PaymentBadge({ status }) {
-  return status === 'paid' ? <Badge tone="success">Paid</Badge> : <Badge tone="warning">Unpaid</Badge>;
+  return status === 'paid' ? (
+    <Badge tone="success">Paid</Badge>
+  ) : (
+    <Badge tone="warning">Waiting for payment</Badge>
+  );
 }

@@ -8,25 +8,39 @@ import { fetchMyPrescriptions } from '../api';
 import { useAuthStore } from '../../../store/authStore';
 import { doctorTitle, formatPeso } from '../../../lib/utils';
 
+function getManilaGreeting() {
+  const hour = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', hour12: false });
+  const h = parseInt(hour, 10);
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function DoctorDashboard() {
   const profile = useAuthStore((s) => s.profile);
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['doctor', 'prescriptions'],
     queryFn: fetchMyPrescriptions,
-    refetchInterval: 15_000, // pick up newly paid prescriptions
+    refetchInterval: 15_000,
   });
 
   const items = data ?? [];
   const paid = items.filter((r) => r.payment_status === 'paid');
+  const waiting = items.length - paid.length;
   const collected = paid.reduce((sum, r) => sum + Number(r.amount), 0);
+
+  const greeting = getManilaGreeting();
+  const doctorName = profile?.full_name ? doctorTitle(profile.full_name) : 'Doctor';
 
   return (
     <div className="space-y-6">
+      {/* Header row (section 11.4) */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-brand-700">Welcome back</p>
-          <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">{doctorTitle(profile?.full_name ?? '')}</h1>
-          <p className="mt-1 text-xs text-ink-500">
+          <h1 className="font-display text-[32px] font-bold text-[#152839] leading-tight">
+            {greeting}, {doctorName}
+          </h1>
+          <p className="mt-1 text-sm text-[#45546a]">
             {[
               profile?.specialty,
               profile?.clinic_name,
@@ -34,27 +48,40 @@ export default function DoctorDashboard() {
             ].filter(Boolean).join(' · ')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Link to="/doctor/profile">
-            <Button variant="secondary">Doctor Details</Button>
+            <Button variant="secondary">Doctor details</Button>
           </Link>
           <Link to="/doctor/new">
-            <Button size="lg"><FilePlus2 className="h-5 w-5" aria-hidden="true" /> New prescription</Button>
+            <Button variant="accent">
+              <FilePlus2 className="h-4 w-4" aria-hidden="true" /> New prescription
+            </Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={FileText} label="Prescriptions issued" value={items.length} />
-        <StatCard icon={Clock3} label="Awaiting payment" value={items.length - paid.length} tone="gold" />
-        <StatCard icon={Banknote} label="Paid by patients" value={formatPeso(collected)} tone="ink" />
+      {/* This month strip: one white panel with 3 figures (section 11.4) */}
+      <div className="grid grid-cols-1 divide-y divide-[#dce1e8] rounded-[20px] border border-[#dce1e8] bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="p-6">
+          <p className="text-sm font-medium text-[#45546a]">Prescriptions this month</p>
+          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{items.length}</p>
+        </div>
+        <div className="p-6">
+          <p className="text-sm font-medium text-[#45546a]">Waiting for payment</p>
+          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{waiting}</p>
+        </div>
+        <div className="p-6">
+          <p className="text-sm font-medium text-[#45546a]">Collected this month</p>
+          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{formatPeso(collected)}</p>
+        </div>
       </div>
 
+      {/* Prescription history */}
       <section aria-labelledby="history-h">
-        <h2 id="history-h" className="mb-3 text-lg font-semibold text-ink-900">Prescription history</h2>
+        <h2 id="history-h" className="mb-4 font-display text-xl font-semibold text-[#152839]">Prescription history</h2>
         {isError ? (
-          <div role="alert" className="rounded-2xl bg-rose-50 p-5 text-sm text-rose-700 ring-1 ring-rose-200">
-            Could not load your prescriptions. <button className="font-semibold underline" onClick={() => refetch()}>Retry</button>
+          <div role="alert" className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-5 text-sm text-[#7a2406]">
+            We couldn’t load your prescriptions. <button className="font-semibold underline ml-1" onClick={() => refetch()}>Try again</button>
           </div>
         ) : (
           <PrescriptionHistory items={items} loading={isLoading} />

@@ -1,3 +1,6 @@
+@import './features/marketing/site.css';
+@import './features/portal/portal.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,30 +8,32 @@
 @layer base {
   html { -webkit-tap-highlight-color: transparent; }
   body {
-    @apply bg-ink-50 font-sans text-ink-900 antialiased;
+    background-color: var(--warm, #f9f8f3);
+    color: var(--navy, #152839);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  h1, h2, h3, h4 { @apply font-display tracking-tight; }
-  :focus-visible { @apply outline-none ring-4 ring-brand-500/30; }
-  ::selection { @apply bg-brand-200 text-brand-950; }
+  h1, h2, h3, h4 {
+    font-family: var(--f-display, 'Poppins', sans-serif);
+    letter-spacing: -0.025em;
+    color: var(--navy, #152839);
+  }
+  :focus-visible { outline: 3px solid #ff6f07; outline-offset: 2px; }
+  ::selection { background: #ff6f07; color: #152839; }
 }
 
 @layer components {
   .mesh-bg {
-    background:
-      radial-gradient(60rem 40rem at 85% -10%, rgb(61 203 178 / .28), transparent 60%),
-      radial-gradient(50rem 36rem at -10% 10%, rgb(240 170 36 / .14), transparent 55%),
-      radial-gradient(40rem 30rem at 50% 110%, rgb(20 142 125 / .18), transparent 60%),
-      #f6f8fb;
+    background: #f9f8f3;
   }
   .glass {
-    @apply border border-white/60 bg-white/70 backdrop-blur-xl;
+    border: 1px solid var(--mist, #dce1e8);
+    background-color: #ffffff;
   }
   .dark-panel {
-    background:
-      radial-gradient(34rem 24rem at 100% 0%, rgb(61 203 178 / .35), transparent 60%),
-      radial-gradient(30rem 24rem at 0% 100%, rgb(240 170 36 / .18), transparent 60%),
-      linear-gradient(160deg, #0f2f2c, #0a101c 70%);
+    background: #152839;
+    color: #ffffff;
   }
   .rx-paper {
     background-color: #fffefb;

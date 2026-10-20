@@ -22,13 +22,18 @@ export function MedicineFields({ control, register, errors, watch }) {
           <fieldset key={field.id} className="rounded-2xl bg-ink-50/70 p-4 ring-1 ring-ink-100 sm:p-5">
             <legend className="sr-only">Medicine {i + 1}</legend>
             <div className="mb-3 flex items-center justify-between">
-              <p className="flex items-center gap-2 font-rx text-lg font-bold text-brand-700">
-                <Pill className="h-4 w-4" aria-hidden="true" /> ℞ {i + 1}
+              <p className="flex items-center gap-2 font-display text-base font-semibold text-[#152839]">
+                <Pill className="h-4 w-4 text-[#ff6f07]" aria-hidden="true" /> Medicine {i + 1}
               </p>
               {fields.length > 1 && (
-                <Button variant="ghost" size="sm" onClick={() => remove(i)} aria-label={`Remove medicine ${i + 1}`} className="text-rose-600 hover:bg-rose-50">
-                  <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  aria-label={`Remove medicine ${i + 1}`}
+                  className="text-sm font-medium text-[#a3330a] hover:underline"
+                >
+                  Remove
+                </button>
               )}
             </div>
 
@@ -57,19 +62,19 @@ export function MedicineFields({ control, register, errors, watch }) {
             </div>
 
             {preview && (
-              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm text-ink-600 ring-1 ring-ink-100">
-                <span className="font-semibold italic text-brand-700">Sig:</span> {preview}
+              <p className="mt-3 rounded-xl border border-[#dce1e8] bg-white px-3.5 py-2 text-sm text-[#152839]">
+                <span className="font-semibold text-[#152839]">Sig:</span> {preview}
               </p>
             )}
           </fieldset>
         );
       })}
 
-      {errors?.medicines?.message && <p role="alert" className="text-sm text-rose-600">{errors.medicines.message}</p>}
-      {errors?.medicines?.root?.message && <p role="alert" className="text-sm text-rose-600">{errors.medicines.root.message}</p>}
+      {errors?.medicines?.message && <p role="alert" className="text-sm text-[#a3330a]">{errors.medicines.message}</p>}
+      {errors?.medicines?.root?.message && <p role="alert" className="text-sm text-[#a3330a]">{errors.medicines.root.message}</p>}
 
       <Button variant="secondary" onClick={() => append({ ...emptyMedicine })} disabled={fields.length >= 15}>
-        <Plus className="h-4 w-4" aria-hidden="true" /> Add another medicine
+        <Plus className="h-4 w-4" aria-hidden="true" /> Add medicine
       </Button>
     </div>
   );

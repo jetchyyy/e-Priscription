@@ -7,13 +7,13 @@ export function RouteErrorFallback() {
   console.error('Route error caught by ErrorBoundary:', error);
 
   return (
-    <div className="mesh-bg flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md text-center">
-        <span className="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 ring-1 ring-rose-200">
+    <div className="flex min-h-screen items-center justify-center bg-[#f9f8f3] px-4 py-12">
+      <div className="w-full max-w-md rounded-[20px] border border-[#dce1e8] bg-white p-8 text-center">
+        <span className="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fbe9e1] text-[#a3330a]">
           <AlertTriangle className="h-8 w-8" />
         </span>
-        <h1 className="text-2xl font-bold text-ink-900">Something went wrong</h1>
-        <p className="mt-2 text-sm text-ink-600">
+        <h1 className="font-display text-2xl font-bold text-[#152839]">Something went wrong</h1>
+        <p className="mt-2 text-sm text-[#45546a]">
           {error?.message || 'An unexpected application error occurred.'}
         </p>
 

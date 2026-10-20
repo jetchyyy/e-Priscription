@@ -4,19 +4,34 @@ export default {
   theme: {
     extend: {
       colors: {
+        ody: {
+          navy: '#152839',
+          'navy-deep': '#0d1b28',
+          orange: '#FF6F07',
+          'orange-deep': '#e05f00',
+          warm: '#F9F8F3',
+          white: '#FFFFFF',
+          sand: '#ECE7DE',
+          'sand-deep': '#ddd5c7',
+          mist: '#DCE1E8',
+          'mist-deep': '#c8d0db',
+          ember: '#B8470A',
+          slate: '#45546A',
+          harbor: '#5F6A7C',
+        },
         brand: {
-          50: '#effcf9', 100: '#d3f8ef', 200: '#a8f0df', 300: '#72e2cb', 400: '#3dcbb2',
-          500: '#1fb099', 600: '#148e7d', 700: '#137265', 800: '#145a52', 900: '#144b45', 950: '#062d2a',
+          50: '#f9f8f3', 100: '#ece7de', 200: '#dce1e8', 300: '#8896ae', 400: '#5F6A7C',
+          500: '#45546A', 600: '#152839', 700: '#152839', 800: '#0d1b28', 900: '#0d1b28', 950: '#060c12',
         },
         ink: {
-          50: '#f6f8fb', 100: '#eceff5', 200: '#d9dfea', 300: '#b8c2d4', 400: '#8896ae',
-          500: '#64738c', 600: '#4b5870', 700: '#394459', 800: '#242e42', 900: '#121a2b', 950: '#0a101c',
+          50: '#f9f8f3', 100: '#ece7de', 200: '#dce1e8', 300: '#c8d0db', 400: '#8896ae',
+          500: '#5F6A7C', 600: '#45546A', 700: '#394459', 800: '#152839', 900: '#152839', 950: '#0d1b28',
         },
         gold: { 300: '#fbd77a', 400: '#f7c455', 500: '#f0aa24' },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'ui-sans-serif', 'sans-serif'],
+        display: ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         rx: ['Fraunces', 'Georgia', 'serif'],
         script: ['Caveat', 'cursive'],
       },

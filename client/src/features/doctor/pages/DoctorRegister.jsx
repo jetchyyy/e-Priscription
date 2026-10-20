@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, FileUp, MailCheck } from 'lucide-react';
-import { PublicLayout } from '../../../components/layout/PublicLayout';
-import { Card } from '../../../components/ui/Card';
+import { CheckCircle2, MailCheck } from 'lucide-react';
+import { AuthShell } from '../../auth/components/AuthShell';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select } from '../../../components/ui/Input';
 import { friendlyAuthError } from '../../auth/api';
@@ -19,10 +18,10 @@ const SPECIALTIES = [
 
 function Section({ title, children }) {
   return (
-    <fieldset className="space-y-4">
-      <legend className="mb-1 font-display text-lg font-semibold text-ink-900">{title}</legend>
+    <div className="space-y-4 pt-2">
+      <h2 className="font-display text-xl font-semibold text-[#152839] border-b border-[#dce1e8] pb-2">{title}</h2>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
-    </fieldset>
+    </div>
   );
 }
 
@@ -51,41 +50,50 @@ export default function DoctorRegister() {
 
   if (result) {
     return (
-      <PublicLayout maxWidth="max-w-xl">
-        <Card className="mt-6 animate-pop text-center sm:!p-10">
+      <AuthShell
+        sideTitle="What happens next"
+        sideText="An administrator checks your PRC license, then you can send your first prescription."
+      >
+        <div className="text-center space-y-4 py-8">
           {result.needsEmailConfirm ? (
-            <MailCheck className="mx-auto h-16 w-16 text-brand-600" aria-hidden="true" />
+            <MailCheck className="mx-auto h-16 w-16 text-[#ff6f07]" aria-hidden="true" />
           ) : (
-            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" aria-hidden="true" />
+            <CheckCircle2 className="mx-auto h-16 w-16 text-[#152839]" aria-hidden="true" />
           )}
-          <h1 className="mt-4 text-2xl font-semibold">
+          <h1 className="font-display text-2xl font-bold text-[#152839]">
             {result.needsEmailConfirm ? 'Check your email' : 'Registration submitted'}
           </h1>
-          <p className="mt-2 text-ink-600">
+          <p className="text-sm text-[#45546a]">
             {result.needsEmailConfirm
               ? 'We sent a confirmation link to your email. After confirming, sign in to finish uploading your PRC license.'
               : 'Your account is now awaiting approval by the administrator. You will be able to sign in and issue prescriptions once approved.'}
           </p>
-          <Link to="/login"><Button className="mt-6" size="lg">Go to sign in</Button></Link>
-        </Card>
-      </PublicLayout>
+          <div className="pt-4">
+            <Link to="/login">
+              <Button variant="primary" size="lg">Go to sign in</Button>
+            </Link>
+          </div>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-    <PublicLayout maxWidth="max-w-3xl">
-      <div className="mb-6">
-        <span className="eyebrow">For licensed doctors</span>
-        <h1 className="mt-3 text-3xl font-semibold text-ink-900 sm:text-4xl">Doctor registration</h1>
-        <p className="mt-2 text-ink-600">
-          Your PRC license is verified by our administrator before you can issue prescriptions.
+    <AuthShell
+      sideTitle="Write prescriptions. Get paid directly."
+      sideText="An administrator checks your PRC license, then you can send your first prescription."
+    >
+      <div className="max-w-[560px] w-full">
+        <h1 className="font-display text-[32px] font-bold text-[#152839]">Create your account</h1>
+        <p className="mt-1 text-sm text-[#45546a]">
+          PRC-licensed physicians can register here to issue e-prescriptions.
         </p>
-      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Card className="space-y-8 sm:!p-8">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-6">
           {serverError && (
-            <div role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">{serverError}</div>
+            <div role="alert" className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
+              {serverError}
+            </div>
           )}
 
           <Section title="Account">
@@ -94,7 +102,7 @@ export default function DoctorRegister() {
             <Input wrapperClassName="sm:col-span-2" label="Email" type="email" required autoComplete="email" inputMode="email"
               error={errors.email?.message} {...register('email')} />
             <Input label="Password" type="password" required autoComplete="new-password"
-              hint="8+ characters with a letter and a number" error={errors.password?.message} {...register('password')} />
+              hint="8+ characters" error={errors.password?.message} {...register('password')} />
             <Input label="Confirm password" type="password" required autoComplete="new-password"
               error={errors.confirmPassword?.message} {...register('confirmPassword')} />
           </Section>
@@ -106,9 +114,9 @@ export default function DoctorRegister() {
               <option value="">Select specialty…</option>
               {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
-            <Input label="PTR no. (optional)" inputMode="numeric" hint="Professional Tax Receipt — shown on prescriptions"
+            <Input label="PTR no. (optional)" inputMode="numeric" hint="Professional Tax Receipt"
               error={errors.ptrNo?.message} {...register('ptrNo')} />
-            <Input label="S2 license no. (optional)" hint="Only if you prescribe dangerous drugs"
+            <Input label="S2 license no. (optional)" hint="Dangerous drugs only"
               error={errors.s2No?.message} {...register('s2No')} />
           </Section>
 
@@ -122,30 +130,42 @@ export default function DoctorRegister() {
               error={errors.phone?.message} {...register('phone')} />
           </Section>
 
-          <fieldset>
-            <legend className="mb-3 font-display text-lg font-semibold text-ink-900">PRC license document</legend>
-            <label htmlFor="licenseFile"
-              className="flex min-h-[7rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-300 bg-ink-50/60 px-4 py-6 text-center transition hover:border-brand-400 hover:bg-brand-50/50 focus-within:ring-4 focus-within:ring-brand-500/20">
-              <FileUp className="h-7 w-7 text-brand-600" aria-hidden="true" />
-              <span className="text-sm font-medium text-ink-800">{file ? file.name : 'Tap to upload a photo or PDF of your PRC ID'}</span>
-              <span className="text-xs text-ink-500">JPG, PNG or PDF · max 5 MB · stored privately</span>
-              <input id="licenseFile" type="file" accept="image/jpeg,image/png,application/pdf" className="sr-only"
-                aria-describedby={errors.licenseFile ? 'licenseFile-err' : undefined} {...register('licenseFile')} />
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[#152839]">PRC license document</label>
+            <label
+              htmlFor="licenseFile"
+              className="flex min-h-[6rem] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[18px] border border-dashed border-[#dce1e8] bg-[#f9f8f3] p-4 text-center transition hover:border-[#152839]"
+            >
+              <span className="text-sm font-semibold text-[#152839]">
+                {file ? file.name : 'Tap to upload a photo or PDF of your PRC ID'}
+              </span>
+              <span className="text-xs text-[#5f6a7c]">JPG, PNG or PDF · max 5 MB</span>
+              <input
+                id="licenseFile"
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                className="sr-only"
+                {...register('licenseFile')}
+              />
             </label>
-            {errors.licenseFile && <p id="licenseFile-err" role="alert" className="mt-1.5 text-sm text-rose-600">{errors.licenseFile.message}</p>}
-          </fieldset>
+            {errors.licenseFile && (
+              <p role="alert" className="text-xs text-[#a3330a]">{errors.licenseFile.message}</p>
+            )}
+          </div>
 
-          <div className="space-y-3">
-            <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>Submit for approval</Button>
-            <p className="text-center text-xs leading-relaxed text-ink-500">
-              By registering you agree that your information is collected to verify your professional license, in line with the Data Privacy Act of 2012 (RA 10173).
+          <div className="space-y-3 pt-2">
+            <Button type="submit" variant="accent" size="lg" className="w-full" loading={isSubmitting}>
+              Create account
+            </Button>
+            <p className="text-center text-xs text-[#5f6a7c]">
+              Personal data is collected solely to verify professional license standing under RA 10173.
             </p>
-            <p className="text-center text-sm text-ink-600">
-              Already registered? <Link to="/login" className="font-semibold text-brand-700 hover:underline">Sign in</Link>
+            <p className="text-center text-sm text-[#45546a]">
+              Already registered? <Link to="/login" className="font-semibold text-[#152839] hover:underline">Sign in</Link>
             </p>
           </div>
-        </Card>
-      </form>
-    </PublicLayout>
+        </form>
+      </div>
+    </AuthShell>
   );
 }

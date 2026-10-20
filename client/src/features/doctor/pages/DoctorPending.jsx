@@ -1,16 +1,22 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Hourglass, LogOut, RefreshCw, UploadCloud, XCircle } from 'lucide-react';
+import { LogOut, RefreshCw, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
-import { PublicLayout } from '../../../components/layout/PublicLayout';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
 import { useAuthStore } from '../../../store/authStore';
 import { uploadLicense } from '../api';
 import { LICENSE_TYPES } from '../schemas';
+import { Ody, Lockup } from '../../marketing/components';
 
-/** Shown to doctors who are signed in but not yet approved (or rejected). */
+const STEPS = [
+  { id: 'reg', label: 'Registered' },
+  { id: 'upload', label: 'License uploaded' },
+  { id: 'review', label: 'Admin review' },
+  { id: 'approved', label: 'Approved' },
+];
+
+/** Shown to doctors who are signed in but not yet approved (or rejected). Follows section 11.8. */
 export default function DoctorPending() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
@@ -25,11 +31,18 @@ export default function DoctorPending() {
   if (profile?.status === 'approved') return <Navigate to="/doctor" replace />;
   const rejected = profile?.status === 'rejected';
 
+  // Determine current step in the linked steps
+  const currentStep = rejected
+    ? 2
+    : !profile?.license_file_path
+    ? 1
+    : 2;
+
   const onRefresh = async () => {
     setChecking(true);
     const p = await refreshProfile();
     setChecking(false);
-    if (p?.status === 'pending') toast.info('Still pending. We’ll notify you once reviewed.');
+    if (p?.status === 'pending') toast.info('We’ll email you when you’re approved.');
   };
 
   const onUpload = async ({ file: files }) => {
@@ -51,47 +64,102 @@ export default function DoctorPending() {
   };
 
   return (
-    <PublicLayout maxWidth="max-w-xl">
-      <Card className="mt-6 text-center sm:!p-10">
-        <span className={`mx-auto inline-flex h-20 w-20 items-center justify-center rounded-3xl ${rejected ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-          {rejected ? <XCircle className="h-10 w-10" aria-hidden="true" /> : <Hourglass className="h-10 w-10 animate-pulse" aria-hidden="true" />}
-        </span>
-        <h1 className="mt-5 text-2xl font-semibold text-ink-900">
-          {rejected ? 'Registration not approved' : 'Awaiting approval'}
-        </h1>
-        <p className="mt-2 text-ink-600">
-          {rejected
-            ? 'The administrator could not approve your registration.'
-            : <>Hi <strong>{profile?.full_name}</strong>, your registration is being reviewed. You can issue prescriptions as soon as your PRC license is verified.</>}
-        </p>
-        {rejected && profile?.reject_reason && (
-          <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-left text-sm text-rose-800 ring-1 ring-rose-200">
-            <strong>Reason:</strong> {profile.reject_reason}
-          </p>
-        )}
+    <div className="ody min-h-screen bg-[#f9f8f3] text-[#152839] flex flex-col justify-between p-4 sm:p-8">
+      <header className="mx-auto w-full max-w-4xl py-4 flex items-center justify-between">
+        <Lockup />
+        <button
+          type="button"
+          onClick={async () => {
+            await signOut();
+            navigate('/login', { replace: true });
+          }}
+          className="text-sm font-medium text-[#45546a] hover:text-[#152839] flex items-center gap-1.5"
+        >
+          <LogOut className="h-4 w-4" /> Sign out
+        </button>
+      </header>
 
-        {!profile?.license_file_path && (
-          <form onSubmit={handleSubmit(onUpload)} className="mt-6 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-4 text-left">
-            <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-              <UploadCloud className="h-4 w-4" aria-hidden="true" /> PRC license still needed
+      <main className="mx-auto w-full max-w-2xl py-8">
+        <div className="rounded-[20px] border border-[#dce1e8] bg-white p-6 sm:p-10 text-center space-y-6">
+          {/* Linked steps row (section 11.8: rounded shapes sharing one wall) */}
+          <div className="flex items-center justify-center overflow-x-auto pb-2">
+            <div className="inline-flex rounded-full border border-[#dce1e8] bg-[#f9f8f3] p-1">
+              {STEPS.map((s, idx) => (
+                <span
+                  key={s.id}
+                  className={`rounded-full px-3.5 py-1 text-xs font-semibold transition ${
+                    idx === currentStep
+                      ? 'bg-[#ff6f07] text-[#152839]'
+                      : idx < currentStep
+                      ? 'bg-[#152839] text-[#f9f8f3]'
+                      : 'text-[#5f6a7c]'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Allowed Ody moment (section 11.8: Ody thinking at 100px) */}
+          {!rejected && (
+            <div className="flex justify-center pt-2">
+              <Ody mood="thinking" alt="Ody mascot thinking" className="w-[100px]" />
+            </div>
+          )}
+
+          <div>
+            <h1 className="font-display text-2xl font-bold text-[#152839]">
+              {rejected ? 'Registration not approved' : "We're checking your PRC license"}
+            </h1>
+            <p className="mt-2 text-sm text-[#45546a]">
+              {rejected
+                ? 'The administrator could not approve your registration.'
+                : 'This usually takes one to two business days. We’ll email you when you’re approved.'}
             </p>
-            <p className="mt-1 text-xs text-amber-900/80">Upload a photo or PDF of your PRC ID so we can verify you.</p>
-            <input type="file" accept="image/jpeg,image/png,application/pdf" aria-label="PRC license file"
-              className="mt-3 block w-full text-sm file:mr-3 file:min-h-10 file:rounded-lg file:border-0 file:bg-ink-900 file:px-4 file:text-sm file:font-medium file:text-white"
-              {...register('file')} />
-            <Button type="submit" size="sm" className="mt-3" loading={uploading} disabled={!file}>Upload license</Button>
-          </form>
-        )}
+          </div>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button variant="secondary" onClick={onRefresh} loading={checking}>
-            <RefreshCw className="h-4 w-4" aria-hidden="true" /> Check status
-          </Button>
-          <Button variant="ghost" onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}>
-            <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
-          </Button>
+          {rejected && profile?.reject_reason && (
+            <div className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-4 text-left text-sm text-[#7a2406]">
+              <strong>Reason:</strong> {profile.reject_reason}
+            </div>
+          )}
+
+          {!profile?.license_file_path && (
+            <form
+              onSubmit={handleSubmit(onUpload)}
+              className="rounded-[18px] border border-[#dce1e8] bg-[#f9f8f3] p-5 text-left space-y-3"
+            >
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#152839]">
+                <UploadCloud className="h-4 w-4 text-[#ff6f07]" aria-hidden="true" /> PRC license still needed
+              </p>
+              <p className="text-xs text-[#5f6a7c]">
+                Upload a JPG, PNG or PDF photo of your PRC ID (up to 5 MB).
+              </p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                aria-label="PRC license file"
+                className="block w-full text-sm file:mr-3 file:min-h-10 file:rounded-full file:border-0 file:bg-[#152839] file:px-4 file:text-sm file:font-semibold file:text-[#f9f8f3] cursor-pointer"
+                {...register('file')}
+              />
+              <Button type="submit" variant="primary" size="sm" loading={uploading} disabled={!file}>
+                Upload license
+              </Button>
+            </form>
+          )}
+
+          <div className="pt-4 border-t border-[#dce1e8] flex justify-center gap-3">
+            <Button variant="secondary" onClick={onRefresh} loading={checking}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" /> Check status
+            </Button>
+          </div>
         </div>
-      </Card>
-    </PublicLayout>
+      </main>
+
+      <footer className="text-center text-xs text-[#5f6a7c] py-4">
+        Protected under the Data Privacy Act of 2012 (RA 10173).
+      </footer>
+    </div>
   );
 }

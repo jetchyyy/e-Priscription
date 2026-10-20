@@ -135,150 +135,132 @@ export default function DoctorQrManagement() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-ink-900 sm:text-3xl">Payment QR Codes</h1>
-          <p className="mt-1 max-w-2xl text-ink-600">
-            Add your bank and e-wallet QR codes (GCash, Maya, BDO, BPI, etc.). Patients can choose and scan any of
-            your active QR codes when paying for their prescription.
+          <h1 className="font-display text-[32px] font-bold text-[#152839]">Payment QR codes</h1>
+          <p className="mt-1 max-w-2xl text-sm text-[#45546a]">
+            Add your GCash, Maya, or bank QR codes. Patients pay the access fee directly to your QR before the prescription opens.
           </p>
         </div>
-        <Button size="lg" onClick={() => setModalOpen(true)}>
-          <Plus className="h-5 w-5" /> Add Bank / E-Wallet QR
-        </Button>
+        <div data-tour="qr-add">
+          <Button variant="accent" onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4" /> Add payment QR
+          </Button>
+        </div>
       </div>
 
       {/* Main List */}
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
-          <Spinner label="Loading your payment methods..." />
+          <Spinner label="Loading payment methods…" />
         </div>
       ) : isError ? (
-        <Card className="text-center">
-          <p className="text-rose-600">Could not load payment methods.</p>
-          <Button variant="ghost" onClick={() => refetch()} className="mt-2">
+        <div className="rounded-[20px] border border-[#f3c2af] bg-[#fbe9e1] p-6 text-center text-sm text-[#7a2406]">
+          <p>Could not load payment methods.</p>
+          <Button variant="ghost" onClick={() => refetch()} className="mt-2 text-[#7a2406]">
             Try again
           </Button>
-        </Card>
+        </div>
       ) : items?.length === 0 ? (
-        <EmptyState
-          icon={QrCode}
-          title="No payment QR codes added yet"
-          description="Upload your GCash, Maya, or Bank QR codes so patients can pay you directly."
-          action={
-            <Button onClick={() => setModalOpen(true)}>
-              <Plus className="h-4 w-4" /> Add your first QR code
+        <div className="flex flex-col items-center justify-center rounded-[20px] border border-[#dce1e8] bg-white p-12 text-center">
+          <Ody mood="happy" alt="Ody mascot" className="w-28 mb-4" />
+          <h3 className="font-display text-lg font-semibold text-[#152839]">
+            No payment QR yet. Add your GCash, Maya or bank QR so patients can pay you.
+          </h3>
+          <p className="mt-1.5 max-w-sm text-sm text-[#45546a]">
+            Patients scan your QR code using GCash, Maya, or any bank app to unlock their prescription.
+          </p>
+          <div className="mt-5" data-tour="qr-add">
+            <Button variant="accent" onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4" /> Add payment QR
             </Button>
-          }
-        />
+          </div>
+        </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => {
-            const provMeta = PROVIDERS.find((p) => p.name === item.provider) ?? {
-              color: 'bg-ink-50 text-ink-700 border-ink-200',
-            };
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, index) => {
+            const masked = item.account_number
+              ? item.account_number.length > 4
+                ? `•••• ${item.account_number.slice(-4)}`
+                : item.account_number
+              : null;
+
             return (
-              <Card key={item.id} className="flex flex-col justify-between overflow-hidden !p-0">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${provMeta.color}`}
-                    >
-                      {provMeta.type === 'wallet' ? (
-                        <Smartphone className="h-3.5 w-3.5" />
-                      ) : (
-                        <Building2 className="h-3.5 w-3.5" />
-                      )}
+              <div
+                key={item.id}
+                className="rounded-[20px] border border-[#dce1e8] bg-white p-5 flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display text-base font-bold text-[#152839]">
                       {item.provider}
                     </span>
 
-                    {/* Active Status Badge / Switch */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleMutation.mutate({ id: item.id, isActive: !item.is_active })
-                      }
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
-                        item.is_active
-                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100'
-                          : 'bg-ink-100 text-ink-500 hover:bg-ink-200'
-                      }`}
-                      title={item.is_active ? 'Click to deactivate' : 'Click to activate'}
+                    {/* Switch: Shown to patients (data-tour="qr-switch" on first item) */}
+                    <div
+                      data-tour={index === 0 ? 'qr-switch' : undefined}
+                      className="flex items-center gap-2"
                     >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          item.is_active ? 'bg-emerald-500' : 'bg-ink-400'
+                      <label className="text-xs text-[#5f6a7c] cursor-pointer" htmlFor={`switch-${item.id}`}>
+                        Shown to patients
+                      </label>
+                      <button
+                        id={`switch-${item.id}`}
+                        type="button"
+                        role="switch"
+                        aria-checked={item.is_active}
+                        onClick={() =>
+                          toggleMutation.mutate({ id: item.id, isActive: !item.is_active })
+                        }
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          item.is_active ? 'bg-[#ff6f07]' : 'bg-[#dce1e8]'
                         }`}
-                      />
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </button>
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            item.is_active ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* QR Image Display */}
+                  {/* QR Image Display on a clean white square with mist border */}
                   <div
                     onClick={() => setPreviewImage(item.qr_image_url)}
-                    className="group relative my-4 flex cursor-pointer items-center justify-center rounded-2xl bg-ink-50 p-3 ring-1 ring-ink-100 transition hover:ring-brand-400"
+                    className="cursor-pointer flex items-center justify-center rounded-2xl border border-[#dce1e8] bg-[#f9f8f3] p-4 transition hover:border-[#152839]"
                   >
                     <img
                       src={item.qr_image_url}
                       alt={`${item.provider} QR code`}
-                      className="max-h-48 rounded-xl object-contain shadow-sm"
+                      className="max-h-44 object-contain"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-ink-900/40 opacity-0 backdrop-blur-[2px] transition group-hover:opacity-100">
-                      <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-900 shadow">
-                        <Eye className="h-3.5 w-3.5" /> Click to enlarge
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Account Details */}
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">
-                      Account Name
-                    </p>
-                    <p className="font-semibold text-ink-900">{item.account_name}</p>
-
-                    {item.account_number && (
-                      <div className="pt-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">
-                          Account / Mobile No.
-                        </p>
-                        <div className="mt-0.5 flex items-center justify-between rounded-lg bg-ink-50 px-2.5 py-1 text-xs font-mono text-ink-800">
-                          <span>{item.account_number}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(item.account_number);
-                              toast.success('Account number copied!');
-                            }}
-                            className="text-ink-400 hover:text-brand-600"
-                            title="Copy number"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                    <p className="text-xs text-[#5f6a7c]">Account Name</p>
+                    <p className="font-semibold text-sm text-[#152839]">{item.account_name}</p>
+                    {masked && (
+                      <p className="text-xs font-mono text-[#5f6a7c]">{masked}</p>
                     )}
                   </div>
                 </div>
 
-                {/* Footer Controls */}
-                <div className="flex items-center justify-between border-t border-ink-100 bg-ink-50/50 px-5 py-3">
-                  <span className="text-xs text-ink-500">
-                    {item.is_active ? 'Displayed to patients' : 'Hidden from patients'}
+                <div className="pt-3 border-t border-[#dce1e8] flex items-center justify-between">
+                  <span className="text-xs text-[#5f6a7c]">
+                    {item.is_active ? 'Active on prescriptions' : 'Hidden from patients'}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  <button
+                    type="button"
                     onClick={() => {
-                      if (confirm(`Remove this ${item.provider} QR code?`)) {
+                      if (window.confirm(`Remove ${item.provider} QR code?`)) {
                         deleteMutation.mutate(item.id);
                       }
                     }}
+                    className="text-xs font-medium text-[#a3330a] hover:underline"
                   >
-                    <Trash2 className="h-4 w-4" /> Remove
-                  </Button>
+                    Remove
+                  </button>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>

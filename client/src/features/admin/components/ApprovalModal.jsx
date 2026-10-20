@@ -70,12 +70,12 @@ export function ApprovalModal({ doctor, onClose }) {
         ) : (
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {doctor.status !== 'rejected' && (
-              <Button variant="secondary" className="text-rose-700" onClick={() => setRejecting(true)}>
+              <Button variant="secondary" onClick={() => setRejecting(true)}>
                 <XCircle className="h-4 w-4" aria-hidden="true" /> {doctor.status === 'approved' ? 'Revoke access' : 'Reject'}
               </Button>
             )}
             {doctor.status !== 'approved' && (
-              <Button loading={review.isPending} onClick={() => review.mutate({ id: doctor.id, status: 'approved' })}>
+              <Button variant="primary" loading={review.isPending} onClick={() => review.mutate({ id: doctor.id, status: 'approved' })}>
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Approve doctor
               </Button>
             )}
@@ -83,8 +83,8 @@ export function ApprovalModal({ doctor, onClose }) {
         )
       }
     >
-      <div className="mb-2"><DoctorStatusBadge status={doctor.status} /></div>
-      <dl className="divide-y divide-ink-100">
+      <div className="mb-3"><DoctorStatusBadge status={doctor.status} /></div>
+      <dl className="divide-y divide-[#dce1e8]">
         <Row label="PRC license no.">{doctor.prc_no}</Row>
         <Row label="PTR no.">{doctor.ptr_no}</Row>
         <Row label="S2 license no.">{doctor.s2_no}</Row>
@@ -96,20 +96,20 @@ export function ApprovalModal({ doctor, onClose }) {
         {doctor.status === 'rejected' && <Row label="Rejection reason">{doctor.reject_reason}</Row>}
       </dl>
 
-      <h3 className="mb-2 mt-5 text-sm font-semibold text-ink-900">Uploaded license</h3>
+      <h3 className="mb-2 mt-5 text-sm font-semibold text-[#152839]">Uploaded license</h3>
       {!path ? (
-        <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200">
-          <FileWarning className="h-4 w-4 shrink-0" aria-hidden="true" /> No license document uploaded yet.
+        <p className="flex items-center gap-2 rounded-xl bg-[#ece7de] px-4 py-3 text-sm text-[#45546a]">
+          <FileWarning className="h-4 w-4 shrink-0 text-[#ff6f07]" aria-hidden="true" /> No license document uploaded yet.
         </p>
       ) : license.isLoading ? (
-        <div className="flex h-32 items-center justify-center rounded-xl bg-ink-50"><Spinner label="Loading license" /></div>
+        <div className="flex h-32 items-center justify-center rounded-xl bg-[#f9f8f3]"><Spinner label="Loading license" /></div>
       ) : license.isError ? (
-        <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">Could not load the document.</p>
+        <p role="alert" className="rounded-xl border border-[#f3c2af] bg-[#fbe9e1] px-4 py-3 text-sm text-[#7a2406]">Could not load the document.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl ring-1 ring-ink-200">
-          {!isPdf && <img src={license.data} alt={`PRC license of ${doctor.full_name}`} className="max-h-80 w-full bg-ink-50 object-contain" />}
+        <div className="overflow-hidden rounded-xl border border-[#dce1e8]">
+          {!isPdf && <img src={license.data} alt={`PRC license of ${doctor.full_name}`} className="max-h-80 w-full bg-[#f9f8f3] object-contain" />}
           <a href={license.data} target="_blank" rel="noreferrer"
-            className="flex min-h-11 items-center justify-center gap-2 bg-ink-50 px-4 text-sm font-semibold text-brand-700 hover:bg-ink-100">
+            className="flex min-h-11 items-center justify-center gap-2 bg-[#f9f8f3] px-4 text-sm font-semibold text-[#152839] hover:bg-[#ece7de]">
             <ExternalLink className="h-4 w-4" aria-hidden="true" /> Open {isPdf ? 'PDF' : 'full image'} in new tab
           </a>
         </div>
