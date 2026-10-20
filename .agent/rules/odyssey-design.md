@@ -18,6 +18,7 @@ request conflicts with it, say so and ask before breaking a rule.
 | Pricing page with plan limits and calculator | `/pricing` | Rebranded, done |
 | Doctor sign in | `/login` | Rebranded, done |
 | Administrator sign in | `/admin/login` | Rebranded, same shell as doctor sign in |
+| Terms and Conditions, Privacy Policy | `/terms`, `/privacy` | Done in `LegalPage` layout; company details are placeholders in `features/marketing/legalInfo.js`; legal review pending |
 | Favicon, tab title, theme colour | `client/index.html`, `client/public/favicon.svg` | Done (favicon still needs ODYSSEY approval) |
 | Doctor register, doctor dashboard, admin dashboard, patient Rx view | `/doctor/*`, `/admin`, `/rx/:id` | **Still the old teal "E-Reseta" style.** Next to restyle, following section 11 |
 

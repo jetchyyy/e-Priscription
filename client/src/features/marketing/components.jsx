@@ -370,6 +370,13 @@ export function SiteFooter() {
             <li><a href="/#patients">Open a prescription</a></li>
           </ul>
         </div>
+        <div className="foot__col">
+          <h2>Legal</h2>
+          <ul>
+            <li><Link to="/terms">Terms and Conditions</Link></li>
+            <li><Link to="/privacy">Privacy Policy</Link></li>
+          </ul>
+        </div>
         <div className="foot__about">
           <p>E-Prescription is built by ODYSSEY, which designs and builds websites, applications and business systems.</p>
           <p>Prescriptions hold personal health information protected under the Data Privacy Act of 2012 (RA 10173). E-Prescription is software and does not replace a physician’s judgment.</p>

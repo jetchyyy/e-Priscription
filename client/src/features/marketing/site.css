@@ -1030,3 +1030,30 @@
   0%, 100% { transform: none; } 10% { transform: translate(-7px, 3px); } 22% { transform: translate(6px, -4px); }
   36% { transform: translate(-5px, -2px); } 50% { transform: translate(4px, 3px); } 66% { transform: translate(-3px, 1px); } 82% { transform: translate(2px, -1px); }
 }
+
+/* ---------- legal pages ---------- */
+.ody .legal { padding-bottom: var(--gap); }
+.ody .legal__head { padding-top: clamp(40px, 5vw, 72px); max-width: 52rem; }
+.ody .legal__head h1 { font-size: var(--t2); font-weight: 700; letter-spacing: -0.03em; }
+.ody .legal__lead { margin-top: 18px; font-size: 19px; max-width: 46ch; }
+.ody .legal__dates { margin-top: 14px; font-size: 15px; color: var(--slate); }
+.ody .legal__grid { margin-top: 56px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; }
+.ody .legal__toc { background: var(--sand); border-radius: 22px; padding: 24px; }
+.ody .legal__toc h2 { font: 600 17px/1.3 var(--f-display); letter-spacing: 0; }
+.ody .legal__toc ol { margin: 14px 0 0; padding-left: 22px; display: grid; gap: 8px; font-size: 15px; }
+.ody .legal__toc a { text-decoration: none; }
+@media (hover: hover) { .ody .legal__toc a:hover { text-decoration: underline; text-underline-offset: .2em; } }
+.ody .legal__other { margin-top: 20px; font-size: 15px; }
+.ody .legal__body { max-width: 68ch; }
+.ody .legal__body section { scroll-margin-top: 24px; }
+.ody .legal__body section + section { margin-top: 48px; }
+.ody .legal__body h2 { font-size: var(--t3); font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; display: flex; gap: 10px; }
+.ody .legal__num { color: var(--ember); }
+.ody .legal__body h3 { margin-top: 24px; font: 600 17px/1.3 var(--f-text); letter-spacing: 0; }
+.ody .legal__body p, .ody .legal__body ul { margin-top: 14px; }
+.ody .legal__body ul { padding-left: 22px; display: grid; gap: 8px; }
+.ody .legal__body li::marker { color: var(--orange); }
+@media (min-width: 1080px) {
+  .ody .legal__grid { grid-template-columns: 300px minmax(0, 1fr); gap: 64px; align-items: start; }
+  .ody .legal__toc { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; }
+}
