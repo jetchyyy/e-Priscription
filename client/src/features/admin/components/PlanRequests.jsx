@@ -37,7 +37,11 @@ function RequestCard({ req, planName }) {
       qc.invalidateQueries({ queryKey: ['admin', 'doctor-plans'] });
       qc.invalidateQueries({ queryKey: ['admin', 'clinics'] });
       toast.success(v.approve
-        ? (req.kind === 'extra_seats' ? `Seats added for ${req.doctor?.full_name}’s clinic` : `${planName} plan started for ${req.doctor?.full_name}`)
+        ? (req.kind === 'extra_seats'
+            ? `Seats added for ${req.doctor?.full_name}’s clinic`
+            : req.kind === 'rx_pack'
+              ? `${Number(req.pack_rx).toLocaleString('en-PH')} prescriptions added for ${req.doctor?.full_name}`
+              : `${planName} plan started for ${req.doctor?.full_name}`)
         : 'Payment rejected. The doctor sees the reason.');
     },
     onError: (e) => toast.error(e?.message || 'Action failed. Please try again.'),
@@ -56,11 +60,13 @@ function RequestCard({ req, planName }) {
         </div>
         <dl className="grid gap-x-6 gap-y-1 text-[15px] sm:grid-cols-3">
           <div>
-            <dt className="text-sm text-[#45546a]">{req.kind === 'extra_seats' ? 'For' : 'Plan'}</dt>
+            <dt className="text-sm text-[#45546a]">{req.kind === 'plan' ? 'Plan' : 'For'}</dt>
             <dd className="font-semibold text-[#152839]">
               {req.kind === 'extra_seats'
                 ? `${req.seats} extra doctor seat${req.seats === 1 ? '' : 's'}`
-                : `${planName}, ${req.billing_period === 'yearly' ? '1 year' : '1 month'}${req.seats ? ` + ${req.seats} extra doctor${req.seats === 1 ? '' : 's'}` : ''}`}
+                : req.kind === 'rx_pack'
+                  ? `${Number(req.pack_rx).toLocaleString('en-PH')} prescriptions (${req.quantity} × ${req.pack?.name ?? 'pack'})${req.clinic_id ? ' for their clinic' : ''}`
+                  : `${planName}, ${req.billing_period === 'yearly' ? '1 year' : '1 month'}${req.seats ? ` + ${req.seats} extra doctor${req.seats === 1 ? '' : 's'}` : ''}`}
             </dd>
           </div>
           <div><dt className="text-sm text-[#45546a]">Price</dt><dd className="font-semibold tabular-nums text-[#152839]">{formatPeso(req.amount)}</dd></div>
@@ -93,7 +99,7 @@ function RequestCard({ req, planName }) {
           <>
             <p className="text-sm text-[#45546a]">Find this reference number in the {req.provider ?? 'ODYSSEY'} account before approving. A screenshot alone is not proof.</p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="primary" loading={review.isPending} onClick={() => review.mutate({ id: req.id, approve: true })}>{req.kind === 'extra_seats' ? 'Payment received, add seats' : 'Payment received, start plan'}</Button>
+              <Button variant="primary" loading={review.isPending} onClick={() => review.mutate({ id: req.id, approve: true })}>{req.kind === 'extra_seats' ? 'Payment received, add seats' : req.kind === 'rx_pack' ? 'Payment received, add prescriptions' : 'Payment received, start plan'}</Button>
               <Button variant="secondary" onClick={() => setRejecting(true)}>Not received</Button>
             </div>
           </>

@@ -227,7 +227,7 @@ function AtLimit() {
           {[
             ['At 80% we tell you', 'Your dashboard shows how many prescriptions are left this month, and when the count starts again.'],
             ['At 100% new ones pause', 'You cannot issue new prescriptions until the 1st. Links already sent still open, and patients can still pay.'],
-            ['Upgrade and carry on', 'Choose a bigger plan from your dashboard and pay by QR. It starts as soon as ODYSSEY confirms your payment.'],
+            ['Upgrade or top up', 'Choose a bigger plan, or just buy a pack of extra prescriptions, from your dashboard and pay by QR. It takes effect as soon as ODYSSEY confirms your payment.'],
           ].map(([t, d], i) => (
             <li key={t} data-reveal style={{ '--i': i }}>
               <span className="o-dot" aria-hidden="true" />
@@ -299,6 +299,7 @@ const BILLING_QS = [
   ['How do I pay for a plan?', 'From your dashboard: choose a plan, scan ODYSSEY’s GCash, Maya or bank QR, and send the receipt. Your plan starts once we confirm the payment, usually within one business day.'],
   ['Do my patients pay ODYSSEY?', 'No. Patients pay the access fee you set into your own QR. Your plan is a separate subscription.'],
   ['What counts as one prescription?', 'Each Rx you issue counts once, however many medicines it lists and however often the patient opens it.'],
+  ['Can I buy more prescriptions without upgrading?', 'Yes. From your dashboard, buy a pack of extra prescriptions by QR. They are used after your monthly limit runs out and stay valid for the time shown on the pack, so a busy month does not force a bigger plan.'],
   ['How do clinic accounts work?', 'A doctor buys the Clinic plan and becomes the owner. The owner invites colleagues by email; each keeps their own account, patients and QR. Everyone shares the clinic’s monthly prescriptions, and the owner can cap one doctor’s share. The owner sees counts and fees only, never patient details. More than five doctors need extra seats.'],
   ['Can I move between plans?', 'Any time. A new plan starts on the day we confirm your payment and runs for a month or a year from then. When a paid plan ends, you move back to Starter.'],
   ['What if I cancel?', 'You keep read access to your history for 90 days and can export it. Links already sent keep opening for patients.'],

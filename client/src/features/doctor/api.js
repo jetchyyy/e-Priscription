@@ -496,3 +496,18 @@ export async function requestExtraSeats({ seats, reference, file, methodId, amou
   if (error) throw error;
   return data;
 }
+
+/** Buys prescriptions without changing plan. The receipt is checked by an admin, then the credits appear. */
+export async function requestRxPack({ packId, quantity = 1, reference, file, methodId, amountRead }) {
+  const path = await uploadPlanProof(file);
+  const { data, error } = await db().rpc('request_rx_pack', {
+    p_pack_id: packId,
+    p_quantity: quantity,
+    p_reference: reference,
+    p_screenshot_path: path,
+    p_method_id: methodId ?? null,
+    p_amount_read: amountRead ?? null,
+  });
+  if (error) throw error;
+  return data;
+}

@@ -10,14 +10,16 @@ export const myPlanQuery = { queryKey: ['doctor', 'plan'], queryFn: fetchMyPlan,
 const n = (v) => Number(v).toLocaleString('en-PH');
 const DAY = 864e5;
 
-/** 'ok' below 80% of the month's prescriptions, 'low' from 80%, 'out' when none are left. */
+/** 'ok' while more than a fifth is left, 'low' below that, 'out' when none are left. Bought prescriptions count as left. */
 export function usageLevel(plan) {
   if (!plan) return 'ok';
   if (plan.rx_left <= 0) return 'out';
   const c = plan.clinic;
   const share = c?.my_cap ? c.my_used / c.my_cap : 0;
-  return Math.max(plan.rx_used / plan.rx_limit, share) >= 0.8 ? 'low' : 'ok';
+  return plan.rx_left <= plan.rx_limit * 0.2 || share >= 0.8 ? 'low' : 'ok';
 }
+
+const credits = (plan) => plan?.credits?.remaining ?? 0;
 
 function Bar({ plan, level }) {
   const c = plan.clinic;
@@ -71,8 +73,8 @@ export function PlanUsage() {
   const outText = clinic?.limited_by === 'cap'
     ? `You have used your share of ${n(clinic.my_cap)} prescriptions this month. Ask your clinic owner to raise it, or wait until ${formatDate(plan.resets_at)}.`
     : isMember
-      ? `Your clinic has used all ${n(plan.rx_limit)} prescriptions this month. Ask the clinic owner to upgrade, or wait until ${formatDate(plan.resets_at)}. Links you already sent keep working.`
-      : `You have used all ${n(plan.rx_limit)} prescriptions this month. Upgrade to keep writing, or wait until ${formatDate(plan.resets_at)}. Links you already sent keep working.`;
+      ? `Your clinic has used all ${n(plan.rx_limit)} prescriptions this month. Ask the clinic owner to upgrade or buy more, or wait until ${formatDate(plan.resets_at)}. Links you already sent keep working.`
+      : `You have used all ${n(plan.rx_limit)} prescriptions this month. Upgrade your plan or buy more prescriptions to keep writing, or wait until ${formatDate(plan.resets_at)}. Links you already sent keep working.`;
 
   return (
     <section
@@ -91,12 +93,23 @@ export function PlanUsage() {
               You: {n(clinic.my_used)}{clinic.my_cap != null ? ` of ${n(clinic.my_cap)} (your share)` : ' written'}
             </p>
           )}
+          {credits(plan) > 0 && (
+            <p className="mt-1 text-sm font-medium text-[#152839]">
+              Plus {n(credits(plan))} bought prescription{credits(plan) === 1 ? '' : 's'}
+              {plan.credits.expires_at ? `, the first ${credits(plan) === 1 ? 'expires' : 'batch expires'} ${formatDate(plan.credits.expires_at)}` : ''}
+            </p>
+          )}
         </div>
-        <Link to={isMember ? '/doctor/clinic' : '/doctor/plan'}>
-          <Button variant={level === 'ok' || isMember ? 'secondary' : 'accent'}>
-            {isMember ? 'View clinic' : level === 'ok' ? 'View plans' : 'Upgrade plan'}
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {!isMember && level !== 'ok' && (
+            <Link to="/doctor/plan#packs"><Button variant="secondary">Buy prescriptions</Button></Link>
+          )}
+          <Link to={isMember ? '/doctor/clinic' : '/doctor/plan'}>
+            <Button variant={level === 'ok' || isMember ? 'secondary' : 'accent'}>
+              {isMember ? 'View clinic' : level === 'ok' ? 'View plans' : 'Upgrade plan'}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4"><Bar plan={plan} level={level} /></div>
@@ -105,13 +118,13 @@ export function PlanUsage() {
         {level === 'out'
           ? outText
           : level === 'low'
-            ? `Only ${n(plan.rx_left)} left for you this month. The count starts again on ${formatDate(plan.resets_at)}.`
-            : `${n(plan.rx_left)} left. The count starts again on ${formatDate(plan.resets_at)}.`}
+            ? `Only ${n(plan.rx_left)} left for you. The monthly count starts again on ${formatDate(plan.resets_at)}.`
+            : `${n(plan.rx_left)} left. The monthly count starts again on ${formatDate(plan.resets_at)}.`}
       </p>
 
       {pending && (
         <p className="mt-2 text-sm text-[#152839]">
-          Your payment for a new plan is waiting for ODYSSEY to confirm. It starts as soon as it is confirmed.
+          Your payment {plan.latest_request.kind === 'rx_pack' ? 'for extra prescriptions' : plan.latest_request.kind === 'extra_seats' ? 'for extra doctor seats' : 'for a new plan'} is waiting for ODYSSEY to confirm. It takes effect as soon as it is confirmed.
         </p>
       )}
       {endsSoon && !pending && !isMember && (
@@ -134,7 +147,7 @@ export function PlanUsageNotice() {
   const clinic = plan.clinic;
   const isMember = clinic?.role === 'doctor';
   if (level === 'ok') {
-    return <p className="text-sm text-[#45546a]">{n(plan.rx_left)} prescriptions left this month{clinic ? ` in ${clinic.name}` : ` on ${plan.plan_name}`}.</p>;
+    return <p className="text-sm text-[#45546a]">{n(plan.rx_left)} prescriptions left{clinic ? ` in ${clinic.name}` : ` on ${plan.plan_name}`}{credits(plan) ? `, including ${n(credits(plan))} bought` : ' this month'}.</p>;
   }
   return (
     <div role={level === 'out' ? 'alert' : 'status'} className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
@@ -143,11 +156,16 @@ export function PlanUsageNotice() {
           ? clinic?.limited_by === 'cap'
             ? `You have used your share of ${n(clinic.my_cap)} prescriptions this month. New ones start again on ${formatDate(plan.resets_at)}.`
             : `${clinic ? 'Your clinic has' : 'You have'} used all ${n(plan.rx_limit)} prescriptions in the ${plan.plan_name} plan this month. New ones start again on ${formatDate(plan.resets_at)}.`
-          : `Only ${n(plan.rx_left)} prescriptions left for you this month.`}
+          : `Only ${n(plan.rx_left)} prescriptions left for you.`}
       </span>
-      {isMember
-        ? <Link to="/doctor/clinic"><Button variant="secondary" size="sm">View clinic</Button></Link>
-        : <Link to="/doctor/plan"><Button variant="accent" size="sm">Upgrade plan</Button></Link>}
+      {isMember ? (
+        <Link to="/doctor/clinic"><Button variant="secondary" size="sm">View clinic</Button></Link>
+      ) : (
+        <span className="flex flex-wrap gap-2">
+          <Link to="/doctor/plan#packs"><Button variant="secondary" size="sm">Buy prescriptions</Button></Link>
+          <Link to="/doctor/plan"><Button variant="accent" size="sm">Upgrade plan</Button></Link>
+        </span>
+      )}
     </div>
   );
 }

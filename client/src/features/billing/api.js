@@ -39,3 +39,28 @@ export const plansQuery = { queryKey: ['plans'], queryFn: fetchPlans, staleTime:
 
 /** Errors the database raises when a plan limit is reached (see 0006_subscription_plans.sql). */
 export const isLimitError = (e) => e?.code === '53400';
+
+/** Turns an rx_packs row into the shape the screens use. */
+export function toPack(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    rx: row.rx_count,
+    price: Number(row.price),
+    validDays: row.valid_days,
+    sortOrder: row.sort_order,
+    isPublic: row.is_public,
+  };
+}
+
+/** Packs of extra prescriptions a doctor can buy (admins also get the hidden ones). */
+export async function fetchPacks() {
+  const { data, error } = await db().from('rx_packs').select('*').order('sort_order', { ascending: true });
+  if (error) throw error;
+  return data.map(toPack);
+}
+
+export const packsQuery = { queryKey: ['rx-packs'], queryFn: fetchPacks, staleTime: 5 * 60_000 };
+
+/** Price per prescription, for comparing packs. */
+export const perRx = (pack) => pack.price / pack.rx;

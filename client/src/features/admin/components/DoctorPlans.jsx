@@ -144,7 +144,10 @@ export function DoctorPlans({ plans }) {
                   {d.latest_request?.status === 'pending' ? ' · payment waiting' : ''}
                 </p>
               </div>
-              <Usage d={d} />
+              <div>
+                <Usage d={d} />
+                {d.credits?.remaining > 0 && <p className="mt-1 text-xs text-[#45546a]">+ {n(d.credits.remaining)} bought</p>}
+              </div>
               <Button variant="secondary" size="sm" onClick={() => setEditing(d)}>Change plan</Button>
             </li>
           ))}

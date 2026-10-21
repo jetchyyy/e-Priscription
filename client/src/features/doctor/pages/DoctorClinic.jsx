@@ -46,7 +46,7 @@ function Summary({ c }) {
   const left = Math.max(c.rx_limit - c.pool_used, 0);
   return (
     <div className="grid grid-cols-1 divide-y divide-[#dce1e8] rounded-[20px] border border-[#dce1e8] bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-      <Stat label="Clinic prescriptions this month" value={`${n(c.pool_used)} of ${n(c.rx_limit)}`} note={`${n(left)} left · restarts ${formatDate(c.resets_at)}`} />
+      <Stat label="Clinic prescriptions this month" value={`${n(c.pool_used)} of ${n(c.rx_limit)}`} note={`${n(left)} left · restarts ${formatDate(c.resets_at)}${c.credits_left ? ` · plus ${n(c.credits_left)} bought` : ''}`} />
       <Stat label="Doctors" value={`${c.seats_used} of ${c.seats_allowed}`} note={c.extra_seats ? `${c.seats_included} included + ${c.extra_seats} extra` : `${c.seats_included} included`} />
       <Stat
         label={`${c.plan_name} plan`}
@@ -263,7 +263,12 @@ export default function DoctorClinic() {
           <h1 className="font-display text-[32px] font-bold text-[#152839]">{c.name}</h1>
           <p className="mt-1 text-sm text-[#45546a]">{owner ? 'You own this clinic.' : 'You are a doctor in this clinic.'}</p>
         </div>
-        {owner && <Link to="/doctor/plan"><Button variant={c.covered ? 'secondary' : 'accent'}>{c.covered ? 'Renew or change plan' : 'Renew clinic plan'}</Button></Link>}
+        {owner && (
+          <div className="flex flex-wrap gap-2">
+            <Link to="/doctor/plan#packs"><Button variant="secondary">Buy prescriptions</Button></Link>
+            <Link to="/doctor/plan"><Button variant={c.covered ? 'secondary' : 'accent'}>{c.covered ? 'Renew or change plan' : 'Renew clinic plan'}</Button></Link>
+          </div>
+        )}
       </div>
 
       {!c.covered && (

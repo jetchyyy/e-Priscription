@@ -54,7 +54,7 @@ export async function reviewChangeRequest({ id, approve, note }) {
 export async function fetchPlanRequests(status = 'pending') {
   let q = db()
     .from('plan_requests')
-    .select('*, doctor:profiles!plan_requests_doctor_id_fkey(full_name, email, clinic_name)')
+    .select('*, doctor:profiles!plan_requests_doctor_id_fkey(full_name, email, clinic_name), pack:rx_packs(name)')
     .order('created_at', { ascending: status === 'pending' })
     .limit(100);
   if (status !== 'all') q = q.eq('status', status);
@@ -177,4 +177,22 @@ export async function setClinic({ id, planId, periodEnd, extraSeats, rxLimitOver
 export async function endClinicAsAdmin(id) {
   const { error } = await db().rpc('admin_end_clinic', { p_id: id });
   if (error) throw error;
+}
+
+// Prescription packs
+export async function savePack(pack, { isNew = false } = {}) {
+  const row = {
+    name: pack.name.trim(),
+    rx_count: Number(pack.rx),
+    price: Number(pack.price),
+    valid_days: pack.validDays === '' || pack.validDays == null ? null : Number(pack.validDays),
+    sort_order: Number(pack.sortOrder) || 0,
+    is_public: Boolean(pack.isPublic),
+  };
+  const q = isNew
+    ? db().from('rx_packs').insert({ id: pack.id.trim().toLowerCase(), ...row })
+    : db().from('rx_packs').update(row).eq('id', pack.id);
+  const { data, error } = await q.select().single();
+  if (error) throw error;
+  return data;
 }

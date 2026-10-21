@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '../../../components/ui/Button';
 import { cn, formatDate, formatDateTime, formatPeso } from '../../../lib/utils';
 import { usePublicPlans } from '../../billing/usePlans';
-import { planPrice } from '../../billing/api';
-import { cancelPlanRequest, fetchMyClinic, requestPlan } from '../api';
+import { packsQuery, perRx, planPrice } from '../../billing/api';
+import { cancelPlanRequest, fetchMyClinic, requestPlan, requestRxPack } from '../api';
 import { PlanUsage, myPlanQuery } from '../components/PlanUsage';
 import { PlanCheckout } from '../components/PlanCheckout';
 
@@ -27,7 +27,9 @@ function RequestStatus({ req, plans }) {
   const name = plans.find((p) => p.id === req.plan_id)?.name ?? req.plan_id;
   const what = req.kind === 'extra_seats'
     ? `${req.seats} extra doctor seat${req.seats === 1 ? '' : 's'}`
-    : `${name}, ${req.billing_period === 'yearly' ? 'one year' : 'one month'}`;
+    : req.kind === 'rx_pack'
+      ? `${n(req.pack_rx)} extra prescriptions`
+      : `${name}, ${req.billing_period === 'yearly' ? 'one year' : 'one month'}`;
 
   if (req.status === 'pending') {
     return (
@@ -38,7 +40,7 @@ function RequestStatus({ req, plans }) {
             {what} · {formatPeso(req.amount)} · sent {formatDateTime(req.created_at)}
             {req.reference_end ? ` · reference ending ${req.reference_end}` : ''}
           </p>
-          <p className="mt-2 text-sm text-[#152839]">It starts as soon as it is confirmed. Your current plan keeps working until then.</p>
+          <p className="mt-2 text-sm text-[#152839]">It takes effect as soon as it is confirmed. Your current plan keeps working until then.</p>
         </div>
         <Button variant="ghost" loading={withdraw.isPending} onClick={() => withdraw.mutate()}>Withdraw</Button>
       </div>
@@ -76,6 +78,59 @@ function Seats({ plan, value, onChange }) {
   );
 }
 
+/** Extra prescriptions without changing plan. Used only after the monthly limit, oldest expiry first. */
+function Packs({ owner, pending, onBuy }) {
+  const { data: packs = [], isLoading, isError, refetch } = useQuery(packsQuery);
+  const [qty, setQty] = useState({});
+  const q = (id) => qty[id] ?? 1;
+
+  return (
+    <section id="packs" aria-labelledby="packs-h" className="scroll-mt-24 space-y-4">
+      <div>
+        <h2 id="packs-h" className="font-display text-xl font-semibold text-[#152839]">Need a few more? Buy prescriptions</h2>
+        <p className="text-sm text-[#45546a]">
+          No plan change needed. Bought prescriptions are used after this month’s limit runs out, so nothing is wasted.
+          {owner ? ' They go to your clinic and are shared by all its doctors.' : ''}
+        </p>
+      </div>
+      {isLoading ? (
+        <div className="h-32 animate-pulse rounded-[20px] bg-[#ece7de]" />
+      ) : isError ? (
+        <div role="alert" className="rounded-[18px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
+          Could not load the packs. <button className="ml-1 font-semibold underline" onClick={() => refetch()}>Try again</button>
+        </div>
+      ) : !packs.length ? (
+        <p className="rounded-[20px] border border-[#dce1e8] bg-white p-6 text-sm text-[#5f6a7c]">No packs are on sale right now. You can upgrade your plan instead.</p>
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-3">
+          {packs.map((p) => {
+            const count = q(p.id);
+            return (
+              <li key={p.id} className="flex flex-col rounded-[20px] border border-[#dce1e8] bg-white p-6">
+                <h3 className="font-display text-xl font-bold text-[#152839]">{n(p.rx)} prescriptions</h3>
+                <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{formatPeso(p.price * count)}</p>
+                <p className="text-sm text-[#45546a]">About {formatPeso(perRx(p))} each · {p.validDays ? `use within ${p.validDays} days` : 'never expires'}</p>
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-[16px] bg-[#f9f8f3] p-3">
+                  <span id={`qty-${p.id}`} className="text-sm font-medium text-[#152839]">Packs</span>
+                  <div role="group" aria-labelledby={`qty-${p.id}`} className="flex items-center gap-2">
+                    <button type="button" aria-label="One fewer pack" disabled={count <= 1} onClick={() => setQty({ ...qty, [p.id]: count - 1 })}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg font-semibold ring-1 ring-[#dce1e8] disabled:opacity-40">−</button>
+                    <span className="w-6 text-center font-semibold tabular-nums" aria-live="polite">{count}</span>
+                    <button type="button" aria-label="One more pack" disabled={count >= 20} onClick={() => setQty({ ...qty, [p.id]: count + 1 })}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg font-semibold ring-1 ring-[#dce1e8] disabled:opacity-40">+</button>
+                  </div>
+                </div>
+                <p className="mt-2 flex-1 text-sm text-[#45546a]">{n(p.rx * count)} prescriptions in total</p>
+                <Button className="mt-4 w-full" variant="secondary" disabled={pending} onClick={() => onBuy(p, count)}>Buy {n(p.rx * count)} prescriptions</Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function DoctorPlan() {
   const plans = usePublicPlans();
   const { data: current } = useQuery(myPlanQuery);
@@ -84,6 +139,7 @@ export default function DoctorPlan() {
   const [seats, setSeats] = useState(null);   // null: use the clinic's current extra seats
   const [checkout, setCheckout] = useState(null);
 
+  const { hash } = useLocation();
   const clinic = clinicQ.data;
   const role = current?.clinic?.role ?? clinic?.role ?? null;
   const pending = current?.latest_request?.status === 'pending';
@@ -105,6 +161,19 @@ export default function DoctorPlan() {
       send: (args) => requestPlan({ planId: p.id, period, extraSeats: extra, ...args }),
     });
   };
+
+  // Links such as /doctor/plan#packs scroll to their section once the page has drawn it.
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash, role]);
+
+  const buyPack = (p, count) => setCheckout({
+    title: `${n(p.rx * count)} extra prescriptions`,
+    description: `${count} × ${p.name}${p.validDays ? `, valid ${p.validDays} days` : ', never expires'}`,
+    amount: p.price * count,
+    footnote: 'We check the payment in our account, usually within one business day. The prescriptions are added once we confirm it.',
+    send: (args) => requestRxPack({ packId: p.id, quantity: count, ...args }),
+  });
 
   if (role === 'doctor') {
     return (
@@ -218,6 +287,8 @@ export default function DoctorPlan() {
           </p>
         )}
       </section>
+
+      <Packs owner={role === 'owner'} pending={pending} onBuy={buyPack} />
 
       <PlanCheckout request={checkout} onClose={() => setCheckout(null)} />
     </div>

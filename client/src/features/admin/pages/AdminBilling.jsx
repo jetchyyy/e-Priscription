@@ -8,12 +8,14 @@ import { DoctorPlans } from '../components/DoctorPlans';
 import { PlanEditor } from '../components/PlanEditor';
 import { PlatformQrs } from '../components/PlatformQrs';
 import { AdminClinics } from '../components/AdminClinics';
+import { PackEditor } from '../components/PackEditor';
 
 const TABS = [
   { key: 'payments', label: 'Payments to verify' },
   { key: 'doctors', label: 'Doctors’ plans' },
   { key: 'clinics', label: 'Clinics' },
   { key: 'plans', label: 'Plans and limits' },
+  { key: 'packs', label: 'Prescription packs' },
   { key: 'qrs', label: 'Payment QRs' },
 ];
 
@@ -63,6 +65,7 @@ export default function AdminBilling() {
           {tab === 'doctors' && <DoctorPlans plans={plans} />}
           {tab === 'clinics' && <AdminClinics plans={plans} />}
           {tab === 'plans' && <PlanEditor plans={plans} />}
+          {tab === 'packs' && <PackEditor />}
           {tab === 'qrs' && <PlatformQrs />}
         </div>
       )}

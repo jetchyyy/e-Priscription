@@ -305,7 +305,7 @@ export default function CreatePrescription() {
             </Button>
             <p className="text-xs text-[#5f6a7c]">
               {atLimit
-                ? <>This month’s limit is reached. <Link to="/doctor/plan" className="font-semibold text-[#b8470a] underline">Upgrade your plan</Link> to create it.</>
+                ? <>This month’s limit is reached. <Link to="/doctor/plan#packs" className="font-semibold text-[#b8470a] underline">Buy prescriptions</Link> or <Link to="/doctor/plan" className="font-semibold text-[#b8470a] underline">upgrade your plan</Link> to create it.</>
                 : 'Prescriptions cannot be edited after they are created.'}
             </p>
           </div>
