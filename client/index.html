@@ -3,16 +3,97 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#152839" />
+    <meta name="application-name" content="E-Prescription" />
+    <meta name="apple-mobile-web-app-title" content="E-Prescription" />
+    <meta name="format-detection" content="telephone=no" />
+
     <title>E-Prescription by ODYSSEY · Prescriptions sent as a link</title>
     <meta
       name="description"
       content="E-Prescription by ODYSSEY lets PRC-licensed doctors in the Philippines send prescriptions as a link. Patients pay by GCash or Maya QR to open them."
     />
+    <meta name="author" content="Odysseyph IT Solutions" />
+    <link rel="canonical" href="__SITE_URL__/" />
+
+    <!-- Link previews: Facebook, Messenger, Viber, Telegram, WhatsApp, LinkedIn, iMessage, Slack, Discord -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="E-Prescription by ODYSSEY" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:url" content="__SITE_URL__/" />
     <meta property="og:title" content="E-Prescription by ODYSSEY · Prescriptions sent as a link" />
-    <meta property="og:description" content="Issue and receive Rx prescriptions through a secure, payment-gated link." />
-    <meta name="robots" content="noindex" />
+    <meta
+      property="og:description"
+      content="PRC-licensed doctors in the Philippines send prescriptions as a link. Patients pay by GCash or Maya QR to open them."
+    />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:secure_url" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Ody, the ODYSSEY mascot, beside the words: Prescriptions sent as a link" />
+
+    <!-- X (Twitter) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="E-Prescription by ODYSSEY · Prescriptions sent as a link" />
+    <meta
+      name="twitter:description"
+      content="PRC-licensed doctors in the Philippines send prescriptions as a link. Patients pay by GCash or Maya QR to open them."
+    />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+    <meta name="twitter:image:alt" content="Ody, the ODYSSEY mascot, beside the words: Prescriptions sent as a link" />
+
+    <!-- Search engines: the public pages may be listed. Prescriptions, portals and sign-in are kept out by the
+         X-Robots-Tag headers in public/_headers. -->
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "__SITE_URL__/#organization",
+            "name": "ODYSSEY",
+            "legalName": "Odysseyph IT Solutions",
+            "url": "https://odysseyph.com",
+            "logo": "__SITE_URL__/icon-512.png",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "3F Roxas Building, N. Bacalso National Road, Lawaan 3",
+              "addressLocality": "Talisay City",
+              "addressRegion": "Cebu",
+              "addressCountry": "PH"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "__SITE_URL__/#website",
+            "url": "__SITE_URL__/",
+            "name": "E-Prescription by ODYSSEY",
+            "inLanguage": "en-PH",
+            "publisher": { "@id": "__SITE_URL__/#organization" }
+          },
+          {
+            "@type": "WebApplication",
+            "name": "E-Prescription by ODYSSEY",
+            "url": "__SITE_URL__/",
+            "applicationCategory": "HealthApplication",
+            "operatingSystem": "Any",
+            "description": "PRC-licensed doctors in the Philippines send prescriptions as a link. Patients pay by GCash or Maya QR to open them.",
+            "inLanguage": "en-PH",
+            "areaServed": { "@type": "Country", "name": "Philippines" },
+            "publisher": { "@id": "__SITE_URL__/#organization" }
+          }
+        ]
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
