@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Banknote, Clock3, FilePlus2, FileText } from 'lucide-react';
+import { FilePlus2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { StatCard } from '../../../components/ui/Card';
 import { PrescriptionHistory } from '../components/PrescriptionHistory';
 import { PaymentsToConfirm } from '../components/PaymentsToConfirm';
+import { ClinicNotices, PlanUsage } from '../components/PlanUsage';
 import { fetchMyPrescriptions } from '../api';
 import { useAuthStore } from '../../../store/authStore';
 import { doctorTitle, formatPeso } from '../../../lib/utils';
+
+const manilaMonth = (d) =>
+  new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: '2-digit', timeZone: 'Asia/Manila' }).format(new Date(d));
 
 function getManilaGreeting() {
   const hour = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', hour12: false });
@@ -26,9 +29,12 @@ export default function DoctorDashboard() {
   });
 
   const items = data ?? [];
-  const paid = items.filter((r) => r.payment_status === 'paid');
-  const waiting = items.length - paid.length;
-  const collected = paid.reduce((sum, r) => sum + Number(r.amount), 0);
+  const month = manilaMonth(new Date());
+  const thisMonth = items.filter((r) => manilaMonth(r.created_at) === month);
+  const waiting = thisMonth.filter((r) => r.payment_status !== 'paid').length;
+  const collected = items
+    .filter((r) => r.payment_status === 'paid' && manilaMonth(r.paid_at ?? r.created_at) === month)
+    .reduce((sum, r) => sum + Number(r.amount), 0);
 
   const greeting = getManilaGreeting();
   const doctorName = profile?.full_name ? doctorTitle(profile.full_name) : 'Doctor';
@@ -61,19 +67,20 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* This month strip: one white panel with 3 figures (section 11.4) */}
-      <div className="grid grid-cols-1 divide-y divide-[#dce1e8] rounded-[20px] border border-[#dce1e8] bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        <div className="p-6">
-          <p className="text-sm font-medium text-[#45546a]">Prescriptions this month</p>
-          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{items.length}</p>
-        </div>
-        <div className="p-6">
-          <p className="text-sm font-medium text-[#45546a]">Waiting for payment</p>
-          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{waiting}</p>
-        </div>
-        <div className="p-6">
-          <p className="text-sm font-medium text-[#45546a]">Collected this month</p>
-          <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{formatPeso(collected)}</p>
+      <ClinicNotices />
+
+      {/* This month: the plan's limit, then the money (section 11.4) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2"><PlanUsage /></div>
+        <div className="grid grid-cols-1 divide-y divide-[#dce1e8] rounded-[20px] border border-[#dce1e8] bg-white sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-1 lg:divide-x-0 lg:divide-y">
+          <div className="p-6">
+            <p className="text-sm font-medium text-[#45546a]">Waiting for payment</p>
+            <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{waiting}</p>
+          </div>
+          <div className="p-6">
+            <p className="text-sm font-medium text-[#45546a]">Collected this month</p>
+            <p className="mt-2 font-display text-[28px] font-bold tabular-nums text-[#152839]">{formatPeso(collected)}</p>
+          </div>
         </div>
       </div>
 

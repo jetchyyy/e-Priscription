@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, ExternalLink, KeyRound, Plus, RefreshCw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, Textarea } from '../../../components/ui/Input';
 import { MedicineFields } from '../components/MedicineFields';
+import { PlanUsageNotice, myPlanQuery, usageLevel } from '../components/PlanUsage';
+import { isLimitError } from '../../billing/api';
 import { CopyLinkButton, ShareLinkButton } from '../components/CopyLinkButton';
 import { createPrescription } from '../api';
 import { emptyMedicine, prescriptionSchema } from '../schemas';
@@ -48,15 +50,21 @@ export default function CreatePrescription() {
   } = useForm({ resolver: zodResolver(prescriptionSchema), defaultValues: defaults() });
 
   const formValues = watch();
+  const { data: plan } = useQuery(myPlanQuery);
+  const atLimit = usageLevel(plan) === 'out';
 
   const mutation = useMutation({
     mutationFn: createPrescription,
     onSuccess: (id, values) => {
       qc.invalidateQueries({ queryKey: ['doctor', 'prescriptions'] });
+      qc.invalidateQueries({ queryKey: myPlanQuery.queryKey });
       setCreated({ id, patient: values.patientName, amount: values.amount, pin: values.pin });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    onError: (e) => toast.error(e?.message || 'Could not create the prescription. Please try again.'),
+    onError: (e) => {
+      if (isLimitError(e)) qc.invalidateQueries({ queryKey: myPlanQuery.queryKey });
+      toast.error(e?.message || 'Could not create the prescription. Please try again.');
+    },
   });
 
   // Allowed Ody moment (section 11.5: "prescription sent" with Ody celebrate at 140px)
@@ -139,6 +147,8 @@ export default function CreatePrescription() {
           <Eye className="h-4 w-4 text-[#ff6f07]" /> Preview slip
         </button>
       </div>
+
+      <PlanUsageNotice />
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 items-start">
         {/* Form in columns 1 to 7 on desktop */}
@@ -289,11 +299,14 @@ export default function CreatePrescription() {
               size="lg"
               className="w-full sm:w-auto"
               loading={mutation.isPending}
+              disabled={atLimit}
             >
               Create prescription
             </Button>
             <p className="text-xs text-[#5f6a7c]">
-              Prescriptions cannot be edited after they are created.
+              {atLimit
+                ? <>This month’s limit is reached. <Link to="/doctor/plan" className="font-semibold text-[#b8470a] underline">Upgrade your plan</Link> to create it.</>
+                : 'Prescriptions cannot be edited after they are created.'}
             </p>
           </div>
         </form>

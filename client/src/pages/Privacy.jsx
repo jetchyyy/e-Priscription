@@ -50,7 +50,8 @@ const S = [
           <li>Requests to change verified details, with the reason and any supporting document you upload, and the administrator’s decision.</li>
           <li>Clinic or hospital name and address, shown on the prescriptions you issue.</li>
           <li>Payment QR codes, provider, account name and number you choose to add, so patients can pay you.</li>
-          <li>Plan, billing and transaction records.</li>
+          <li>Plan, billing and transaction records, including the receipt screenshot and reference number you send when you pay for a plan.</li>
+          <li>Clinic membership: the clinic you belong to, invitations sent to your email, and any monthly prescription share the clinic owner sets for you.</li>
         </ul>
         <h3>About patients, entered by the physician</h3>
         <ul>
@@ -119,6 +120,10 @@ const S = [
             <strong>Service providers that host and run the Service for us</strong>, such as our cloud database and hosting
             provider and our email provider. They act under written agreements, process data only on our instructions and must
             protect it as the Data Privacy Act requires.
+          </li>
+          <li>
+            <strong>The clinic owner</strong>, if you belong to a clinic: the owner sees how many prescriptions you issued and the fees you
+            collected each month, and your name and email. The owner does not see your patients’ names, diagnoses or medicines.
           </li>
           <li><strong>Government agencies, courts or law enforcement</strong> when the law or a lawful order requires it.</li>
         </ul>

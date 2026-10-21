@@ -358,3 +358,141 @@ export async function rejectPaymentProof(id, reason) {
   const { error } = await db().rpc('reject_payment_proof', { p_id: id, p_reason: reason || null });
   if (error) throw error;
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Subscription plan: usage this month, and paying ODYSSEY for a plan by QR (verified by an admin)
+// ---------------------------------------------------------------------------------------------------------
+
+/** Current plan, limits, prescriptions used this month and the latest plan payment (see my_plan()). */
+export async function fetchMyPlan() {
+  const { data, error } = await db().rpc('my_plan');
+  if (error) throw error;
+  return data;
+}
+
+/** ODYSSEY's own payment QRs, where doctors pay for a plan. */
+export async function fetchPlatformPaymentMethods() {
+  const { data, error } = await db()
+    .from('platform_payment_methods')
+    .select('id, provider, account_name, account_number, qr_image_url')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+const PROOF_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+async function uploadPlanProof(file) {
+  const supabase = db();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user.id;
+  if (!userId) throw new Error('Your session expired. Please sign in again.');
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${PROOF_EXT[file.type] ?? 'png'}`;
+  const { error } = await supabase.storage.from('plan-payment-proofs').upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+export async function requestPlan({ planId, period, reference, file, methodId, amountRead, extraSeats = 0 }) {
+  const path = await uploadPlanProof(file);
+  const { data, error } = await db().rpc('request_plan', {
+    p_plan_id: planId,
+    p_period: period,
+    p_reference: reference,
+    p_screenshot_path: path,
+    p_method_id: methodId ?? null,
+    p_amount_read: amountRead ?? null,
+    p_extra_seats: extraSeats,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelPlanRequest(id) {
+  const { error } = await db().rpc('cancel_plan_request', { p_id: id });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Clinics: several doctors sharing one plan
+// ---------------------------------------------------------------------------------------------------------
+
+/** The signed-in doctor's clinic (owner view includes members and invitations), or null. */
+export async function fetchMyClinic() {
+  const { data, error } = await db().rpc('my_clinic');
+  if (error) throw error;
+  return data;
+}
+
+/** Invitations to join a clinic, sent to this doctor's email. */
+export async function fetchMyClinicInvites() {
+  const { data, error } = await db().rpc('my_clinic_invites');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function respondClinicInvite({ id, accept }) {
+  const { error } = await db().rpc('respond_clinic_invite', { p_id: id, p_accept: accept });
+  if (error) throw error;
+}
+
+export async function inviteDoctor(email) {
+  const { error } = await db().rpc('invite_doctor', { p_email: email });
+  if (error) throw error;
+}
+
+export async function cancelClinicInvite(id) {
+  const { error } = await db().rpc('cancel_clinic_invite', { p_id: id });
+  if (error) throw error;
+}
+
+export async function renameClinic(name) {
+  const { error } = await db().rpc('rename_clinic', { p_name: name });
+  if (error) throw error;
+}
+
+export async function setMemberCap({ doctorId, cap }) {
+  const { error } = await db().rpc('set_member_cap', { p_doctor: doctorId, p_cap: cap });
+  if (error) throw error;
+}
+
+export async function removeClinicMember(doctorId) {
+  const { error } = await db().rpc('remove_clinic_member', { p_doctor: doctorId });
+  if (error) throw error;
+}
+
+export async function transferClinicOwner(doctorId) {
+  const { error } = await db().rpc('transfer_clinic_owner', { p_doctor: doctorId });
+  if (error) throw error;
+}
+
+export async function endClinic() {
+  const { error } = await db().rpc('end_clinic');
+  if (error) throw error;
+}
+
+export async function leaveClinic() {
+  const { error } = await db().rpc('leave_clinic');
+  if (error) throw error;
+}
+
+/** Price of extra doctor seats for the rest of the clinic's paid period. */
+export async function quoteExtraSeats(seats) {
+  const { data, error } = await db().rpc('quote_extra_seats', { p_seats: seats });
+  if (error) throw error;
+  return Number(data);
+}
+
+export async function requestExtraSeats({ seats, reference, file, methodId, amountRead }) {
+  const path = await uploadPlanProof(file);
+  const { data, error } = await db().rpc('request_extra_seats', {
+    p_seats: seats,
+    p_reference: reference,
+    p_screenshot_path: path,
+    p_method_id: methodId ?? null,
+    p_amount_read: amountRead ?? null,
+  });
+  if (error) throw error;
+  return data;
+}

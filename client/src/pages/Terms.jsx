@@ -156,9 +156,10 @@ const S = [
           page and are part of these Terms. Prices are in Philippine pesos and include VAT unless stated otherwise.
         </p>
         <ul>
-          <li>Paid plans renew automatically each month or year until cancelled. You may cancel at any time; the plan stays active to the end of the period already paid.</li>
-          <li>When you reach your monthly limit, you cannot issue new prescriptions until the limit resets or you upgrade. Links already sent keep working.</li>
-          <li>Upgrades take effect at once and are charged pro rata. Downgrades take effect at the next billing date.</li>
+          <li>You pay for a plan by scanning ODYSSEY’s payment QR and sending the receipt and reference number from your dashboard. A paid plan starts on the day we confirm the payment and runs for one month or one year. Plans do not renew by themselves; when a paid period ends, your account moves back to the free plan.</li>
+          <li>Monthly limits count the prescriptions you issue in each calendar month, Philippine time. When you reach your limit, you cannot issue new prescriptions until the 1st of the next month or until you upgrade. Links already sent keep working.</li>
+          <li>Renewing the same plan adds the new period after the one already paid. Changing to another plan starts the new plan on the day we confirm the payment; the unused part of the old plan is not refunded or carried over.</li>
+          <li>Sending a receipt for a payment you did not make, or reusing another person’s receipt, is prohibited and may lead to suspension of your account.</li>
           <li>We will give at least 30 days’ notice of a price increase for your plan. You may cancel before it applies.</li>
           <li>Except where the law requires otherwise, fees already paid are not refundable for partial periods.</li>
         </ul>
@@ -166,6 +167,27 @@ const S = [
           Nothing in these Terms limits the rights you have under the Consumer Act of the Philippines (Republic Act No. 7394)
           or the Internet Transactions Act of 2023 (Republic Act No. 11967).
         </p>
+      </>
+    ),
+  },
+  {
+    id: 'clinics',
+    title: 'Clinic accounts',
+    body: (
+      <>
+        <p>
+          A physician who buys a clinic plan becomes the clinic owner and may invite other registered physicians to share the plan.
+          Each physician keeps their own account, PRC verification, patients, prescriptions and payment QR codes.
+        </p>
+        <ul>
+          <li>The clinic’s monthly prescription limit is shared by all its physicians. The owner may set a lower monthly share for a physician.</li>
+          <li>The plan includes a number of physicians. More physicians need extra seats, paid for the rest of the paid period, and the same seats are included when the owner renews.</li>
+          <li>The owner sees, for each physician, the number of prescriptions issued and the fees collected in the month. The owner does not see patient names, diagnoses, medicines or notes of other physicians.</li>
+          <li>The owner pays for the clinic plan and is responsible for inviting only physicians who agree to join. A physician may leave a clinic at any time; prescriptions they issued stay with them.</li>
+          <li>While a physician is in a clinic, their own paid plan, if any, is paused and its remaining days resume when they leave or the clinic’s paid period ends.</li>
+          <li>If the clinic’s paid period ends or the clinic is ended, its physicians return to their own plans. Paid days left on a clinic plan are not refunded.</li>
+          <li>A physician whose account is suspended or rejected is removed from the clinic. If the owner’s account is suspended, the clinic ends.</li>
+        </ul>
       </>
     ),
   },

@@ -16,6 +16,7 @@ const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/admin/pages/AdminLoginPage'));
 
 const AdminDashboard = lazy(() => import('../features/admin/pages/AdminDashboard'));
+const AdminBilling = lazy(() => import('../features/admin/pages/AdminBilling'));
 
 const DoctorRegister = lazy(() => import('../features/doctor/pages/DoctorRegister'));
 const DoctorPending = lazy(() => import('../features/doctor/pages/DoctorPending'));
@@ -23,6 +24,8 @@ const DoctorDashboard = lazy(() => import('../features/doctor/pages/DoctorDashbo
 const CreatePrescription = lazy(() => import('../features/doctor/pages/CreatePrescription'));
 const DoctorProfile = lazy(() => import('../features/doctor/pages/DoctorProfile'));
 const DoctorQrManagement = lazy(() => import('../features/doctor/pages/DoctorQrManagement'));
+const DoctorPlan = lazy(() => import('../features/doctor/pages/DoctorPlan'));
+const DoctorClinic = lazy(() => import('../features/doctor/pages/DoctorClinic'));
 
 const PrescriptionView = lazy(() => import('../features/patient/pages/PrescriptionView'));
 const MockPay = lazy(() => import('../features/patient/pages/MockPay'));
@@ -61,13 +64,18 @@ export const router = createBrowserRouter([
           { path: '/doctor/new', element: <CreatePrescription /> },
           { path: '/doctor/profile', element: <DoctorProfile /> },
           { path: '/doctor/qr-codes', element: <DoctorQrManagement /> },
+          { path: '/doctor/plan', element: <DoctorPlan /> },
+          { path: '/doctor/clinic', element: <DoctorClinic /> },
         ],
       },
 
       // Super admin portal
       {
         element: <RequireRole role="admin"><AppShell /></RequireRole>,
-        children: [{ path: '/admin', element: <AdminDashboard /> }],
+        children: [
+          { path: '/admin', element: <AdminDashboard /> },
+          { path: '/admin/billing', element: <AdminBilling /> },
+        ],
       },
 
       { path: '*', element: <NotFound /> },

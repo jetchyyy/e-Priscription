@@ -6,6 +6,7 @@ import {
   Closer, Faq, Ody, PayCard, PhoneRx, RxSlip, SiteFooter, SiteNav, useSiteMotion,
 } from '../features/marketing/components';
 import { PLANS, peso } from '../features/marketing/plans';
+import { usePublicPlans } from '../features/billing/usePlans';
 
 /* ---------- hero: the link, and the moment it is paid ---------- */
 function SentPanel({ state, simulate }) {
@@ -228,15 +229,20 @@ function Points() {
 
 /* ---------- two plans, two fields ---------- */
 function Duo() {
-  const [, solo, clinic] = PLANS;
+  const plans = usePublicPlans();
+  const pick = (id) => plans.find((p) => p.id === id) ?? PLANS.find((p) => p.id === id);
+  const solo = pick('solo');
+  const clinic = pick('clinic');
+  const free = plans.find((p) => !p.monthly) ?? PLANS[0];
+  const n = (v) => v.toLocaleString('en-PH');
   return (
     <section className="duo" aria-label="Plans">
       <div className="duo__field">
         <h2 data-reveal>{clinic.name}</h2>
         <p className="duo__who" data-reveal style={{ '--i': 1 }}>{clinic.who}</p>
         <p className="duo__incl" data-reveal style={{ '--i': 2 }}>
-          1,500 prescriptions a month shared by up to five doctors, ten payment QRs, a letterhead for each doctor,
-          a clinic admin and an onboarding call.
+          {n(clinic.rxLimit)} prescriptions a month shared by up to {clinic.doctors} doctors, {n(clinic.qrLimit)} payment QRs,
+          a letterhead for each doctor, a clinic admin and an onboarding call.
         </p>
         <div className="duo__foot">
           <p className="duo__price num">{peso(clinic.monthly)}<small>a month</small></p>
@@ -247,8 +253,8 @@ function Duo() {
         <h2 data-reveal>{solo.name}</h2>
         <p className="duo__who" data-reveal style={{ '--i': 1 }}>{solo.who}</p>
         <p className="duo__incl" data-reveal style={{ '--i': 2 }}>
-          250 prescriptions a month, three payment QRs, your full history, your own clinic letterhead and CSV export.
-          Starter is free for 20 prescriptions a month if you want to try it first.
+          {n(solo.rxLimit)} prescriptions a month, {n(solo.qrLimit)} payment QRs, your full history, your own clinic letterhead
+          and CSV export. {free.name} is free for {n(free.rxLimit)} prescriptions a month if you want to try it first.
         </p>
         <div className="duo__foot">
           <p className="duo__price num">{peso(solo.monthly)}<small>a month</small></p>

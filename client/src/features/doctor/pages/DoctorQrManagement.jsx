@@ -20,6 +20,7 @@ import { Input, Select } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { Spinner } from '../../../components/ui/Spinner';
 import { useAuthStore } from '../../../store/authStore';
+import { Ody } from '../../marketing/components';
 import {
   fetchMyPaymentMethods,
   createPaymentMethod,
@@ -80,7 +81,7 @@ export default function DoctorQrManagement() {
       qc.invalidateQueries({ queryKey: ['doctor', 'payment-methods'] });
       toast.success('Status updated');
     },
-    onError: () => toast.error('Could not update status.'),
+    onError: (err) => toast.error(err?.message || 'Could not update status.'),
   });
 
   const deleteMutation = useMutation({

@@ -4,18 +4,20 @@ import '../features/marketing/site.css';
 import {
   Closer, DepartmentsCard, Faq, PhoneRx, RxSlip, SiteFooter, SiteNav, useSiteMotion,
 } from '../features/marketing/components';
-import { CONTACT_EMAIL, LIMITS, PLANS, peso, recommend, yearlyPrice } from '../features/marketing/plans';
+import { CONTACT_EMAIL, limitRows, peso, recommend, yearlyPrice } from '../features/marketing/plans';
+import { usePublicPlans } from '../features/billing/usePlans';
 
 const signup = (plan) => `/doctor/register?plan=${plan.id}`;
 
 function priceFor(plan, yearly) {
   if (!plan.monthly) return { big: '₱0', small: 'forever', note: 'No card needed' };
+  const saved = plan.monthly * 12 - plan.yearly;
   return yearly
-    ? { big: peso(yearlyPrice(plan.monthly)), small: 'a year', note: `${peso(plan.monthly * 2)} less than paying monthly` }
+    ? { big: peso(plan.yearly), small: 'a year', note: saved > 0 ? `${peso(saved)} less than paying monthly` : 'Paid once a year' }
     : { big: peso(plan.monthly), small: 'a month', note: 'Billed monthly, cancel any time' };
 }
 
-function Steps({ yearly, setYearly }) {
+function Steps({ plans, yearly, setYearly }) {
   return (
     <section className="p-hero wrap" aria-labelledby="pricing-h">
       <div className="steps">
@@ -29,7 +31,7 @@ function Steps({ yearly, setYearly }) {
             <button type="button" aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly, 2 months free</button>
           </div>
         </div>
-        {PLANS.map((plan, i) => {
+        {plans.map((plan, i) => {
           const p = priceFor(plan, yearly);
           return (
             <article className="tile" key={plan.id} data-reveal style={{ '--i': i }} aria-labelledby={`tile-${plan.id}`}>
@@ -60,18 +62,19 @@ function Steps({ yearly, setYearly }) {
   );
 }
 
-function Calculator({ yearly }) {
+function Calculator({ plans, yearly }) {
   const [rx, setRx] = useState(120);
   const [doctors, setDoctors] = useState(1);
-  const { plan, extraDoctors } = recommend(rx, doctors);
+  const { plan, extraDoctors } = recommend(rx, doctors, plans);
   const max = 2000;
 
   let price = 0;
   let perRx = null;
   if (plan) {
-    const monthly = plan.monthly + (extraDoctors || 0) * (plan.extraDoctor || 0);
-    price = yearly ? yearlyPrice(monthly) : monthly;
-    perRx = rx > 0 && monthly > 0 ? (yearly ? yearlyPrice(monthly) / 12 : monthly) / rx : 0;
+    const extra = (extraDoctors || 0) * (plan.extraDoctor || 0);
+    const monthly = plan.monthly + extra;
+    price = yearly ? plan.yearly + yearlyPrice(extra) : monthly;
+    perRx = rx > 0 && monthly > 0 ? (yearly ? price / 12 : monthly) / rx : 0;
   }
   const use = plan ? Math.min(100, Math.round((rx / plan.rxLimit) * 100)) : 100;
 
@@ -116,7 +119,7 @@ function Calculator({ yearly }) {
                     <p className="calc__plan">{plan.name}{extraDoctors ? ` + ${extraDoctors} extra ${extraDoctors === 1 ? 'doctor' : 'doctors'}` : ''}</p>
                     <p className="calc__price num">{peso(price)}<small>{yearly ? 'a year' : 'a month'}</small></p>
                     <p className="calc__per num">
-                      {perRx ? `About ${peso(perRx.toFixed(2))} per prescription` : 'Free while you stay under 20 a month'}
+                      {perRx ? `About ${peso(perRx.toFixed(2))} per prescription` : `Free while you stay under ${plan.rxLimit.toLocaleString('en-PH')} a month`}
                     </p>
                     <div className="calc__use" style={{ '--use': `${use}%` }}><i /></div>
                     <p className="calc__usenote num">Uses {use}% of the {plan.rxLimit.toLocaleString('en-PH')} included</p>
@@ -139,8 +142,9 @@ function Calculator({ yearly }) {
   );
 }
 
-function Limits({ yearly }) {
-  const rec = 1;
+function Limits({ plans, yearly }) {
+  const rec = Math.max(0, plans.findIndex((p) => p.id === 'solo'));
+  const rows = limitRows(plans);
   return (
     <section className="limits wrap" aria-labelledby="limits-h">
       <h2 id="limits-h" data-reveal>Every limit, side by side</h2>
@@ -152,7 +156,7 @@ function Limits({ yearly }) {
         <thead>
           <tr>
             <th scope="col"><span className="sr-only">Limit</span></th>
-            {PLANS.map((p, i) => {
+            {plans.map((p, i) => {
               const pr = priceFor(p, yearly);
               return (
                 <th scope="col" key={p.id} className={i === rec ? 'rec' : undefined}>
@@ -164,7 +168,7 @@ function Limits({ yearly }) {
           </tr>
         </thead>
         <tbody>
-          {LIMITS.map((row) => (
+          {rows.map((row) => (
             <tr key={row.label}>
               <th scope="row">{row.label}</th>
               {row.values.map((v, i) => <td key={i} className={i === rec ? 'rec' : undefined}>{v}</td>)}
@@ -174,7 +178,7 @@ function Limits({ yearly }) {
         <tfoot>
           <tr>
             <td />
-            {PLANS.map((p, i) => (
+            {plans.map((p, i) => (
               <td key={p.id} className={i === rec ? 'rec' : undefined}>
                 <Link to={signup(p)} className={i === rec ? 'btn' : 'btn btn--light'}>{p.cta}</Link>
               </td>
@@ -183,14 +187,14 @@ function Limits({ yearly }) {
         </tfoot>
       </table>
       <div className="lblocks">
-        {PLANS.map((p, i) => {
+        {plans.map((p, i) => {
           const pr = priceFor(p, yearly);
           return (
             <div className={`lblock${i === rec ? ' rec' : ''}`} key={p.id}>
               <h3>{p.name}</h3>
               <p className="lblock__price num">{pr.big} {pr.small}</p>
               <dl>
-                {LIMITS.map((row) => (
+                {rows.map((row) => (
                   <div key={row.label}><dt>{row.label}</dt><dd>{row.values[i]}</dd></div>
                 ))}
               </dl>
@@ -215,15 +219,15 @@ function AtLimit() {
           <div className="usage" data-ui data-reveal style={{ '--i': 2 }}>
             <div className="usage__top"><span>This month</span><span className="num">205 of 250</span></div>
             <div className="usage__bar"><i /></div>
-            <p>You have 45 prescriptions left until 1 November. Links you already sent keep working.</p>
+            <p>You have 45 prescriptions left this month. Links you already sent keep working.</p>
             <span className="usage__btn">Move up to Clinic</span>
           </div>
         </div>
         <ol>
           {[
-            ['At 80% we tell you', 'You get an email and a note on your dashboard with how many prescriptions are left this month.'],
+            ['At 80% we tell you', 'Your dashboard shows how many prescriptions are left this month, and when the count starts again.'],
             ['At 100% new ones pause', 'You cannot issue new prescriptions until the 1st. Links already sent still open, and patients can still pay.'],
-            ['Upgrade and carry on', 'Move up a plan at any time. You pay only the difference for the days left in the month.'],
+            ['Upgrade and carry on', 'Choose a bigger plan from your dashboard and pay by QR. It starts as soon as ODYSSEY confirms your payment.'],
           ].map(([t, d], i) => (
             <li key={t} data-reveal style={{ '--i': i }}>
               <span className="o-dot" aria-hidden="true" />
@@ -291,31 +295,34 @@ function Hospitals() {
 }
 
 const BILLING_QS = [
-  ['Is Starter really free?', 'Yes. 20 prescriptions a month, one doctor and one payment QR, with no card needed. Upgrade when you need more.'],
-  ['How do I pay for a plan?', 'By card, GCash or Maya, monthly or yearly. Clinic and hospital plans can also pay by bank transfer against an invoice.'],
+  ['Is Starter really free?', 'Yes, with no card needed. It covers a small number of prescriptions a month for one doctor, and you can upgrade when you need more.'],
+  ['How do I pay for a plan?', 'From your dashboard: choose a plan, scan ODYSSEY’s GCash, Maya or bank QR, and send the receipt. Your plan starts once we confirm the payment, usually within one business day.'],
   ['Do my patients pay ODYSSEY?', 'No. Patients pay the access fee you set into your own QR. Your plan is a separate subscription.'],
   ['What counts as one prescription?', 'Each Rx you issue counts once, however many medicines it lists and however often the patient opens it.'],
-  ['Can I move between plans?', 'Any time. Upgrades start straight away with a prorated charge; downgrades start at your next billing date.'],
+  ['How do clinic accounts work?', 'A doctor buys the Clinic plan and becomes the owner. The owner invites colleagues by email; each keeps their own account, patients and QR. Everyone shares the clinic’s monthly prescriptions, and the owner can cap one doctor’s share. The owner sees counts and fees only, never patient details. More than five doctors need extra seats.'],
+  ['Can I move between plans?', 'Any time. A new plan starts on the day we confirm your payment and runs for a month or a year from then. When a paid plan ends, you move back to Starter.'],
   ['What if I cancel?', 'You keep read access to your history for 90 days and can export it. Links already sent keep opening for patients.'],
 ];
 
 export default function Pricing() {
   const ref = useSiteMotion();
   const [yearly, setYearly] = useState(false);
+  const plans = usePublicPlans();
+  const free = plans.find((p) => !p.monthly);
   useEffect(() => { document.title = 'Pricing and limits · E-Prescription by ODYSSEY'; }, []);
   return (
     <div className="ody" ref={ref}>
       <SiteNav />
       <main>
-        <Steps yearly={yearly} setYearly={setYearly} />
-        <Calculator yearly={yearly} />
-        <Limits yearly={yearly} />
+        <Steps plans={plans} yearly={yearly} setYearly={setYearly} />
+        <Calculator plans={plans} yearly={yearly} />
+        <Limits plans={plans} yearly={yearly} />
         <Pharmacies />
         <AtLimit />
         <Hospitals />
         <Faq id="billing" title="Billing questions" items={BILLING_QS} />
-        <Closer title="Start on Starter, free" >
-          Register with your PRC license and send up to 20 prescriptions a month at no cost. Move up a plan when your clinic needs it.
+        <Closer title={`Start on ${free?.name ?? 'Starter'}, free`}>
+          Register with your PRC license and send up to {free?.rxLimit ?? 20} prescriptions a month at no cost. Move up a plan when your clinic needs it.
         </Closer>
       </main>
       <SiteFooter />
