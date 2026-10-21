@@ -1,0 +1,13 @@
+// Cloudflare Workers config for building from the repository root (the Cloudflare dashboard default).
+// It does the same as client/wrangler.jsonc: serve the Vite build as static files. If you set the dashboard's
+// "Root directory" to client, that folder's own wrangler.jsonc is used instead.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "e-prescription",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./client/dist",
+    // Deep links such as /rx/<id> or /doctor/plan load index.html and React Router takes over.
+    "not_found_handling": "single-page-application"
+  }
+}

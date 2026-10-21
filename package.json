@@ -8,16 +8,18 @@
   },
   "scripts": {
     "dev": "npm --prefix client run dev",
-    "build": "npm --prefix client run build",
+    "build": "npm --prefix client ci && npm --prefix client run build",
     "preview": "npm --prefix client run preview",
-    "test": "npm --prefix client run test"
+    "test": "npm --prefix client run test",
+    "deploy": "npm run build && wrangler deploy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "dotenv-cli": "^11.0.0",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "wrangler": "^4.151.3"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
