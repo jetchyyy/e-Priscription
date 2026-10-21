@@ -1,0 +1,21 @@
+# Security and caching headers, applied by Cloudflare to every response from dist/.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Vite file names change whenever their content does, so they can be cached for a year.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Prescription links and the portals must never appear in search results.
+/rx/*
+  X-Robots-Tag: noindex, nofollow
+/doctor/*
+  X-Robots-Tag: noindex, nofollow
+/admin*
+  X-Robots-Tag: noindex, nofollow
+/login
+  X-Robots-Tag: noindex, nofollow

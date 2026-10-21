@@ -1,0 +1,12 @@
+// Cloudflare Workers config: serves the Vite build (dist/) as static assets. No server code runs here;
+// the data lives in Supabase. Deploy with `npm run deploy`, or connect the Git repo in the Cloudflare dashboard.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "e-prescription",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Deep links such as /rx/<id> or /doctor/plan load index.html and React Router takes over.
+    "not_found_handling": "single-page-application"
+  }
+}

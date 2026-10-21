@@ -9,3 +9,6 @@ supabase/.temp/
 supabase/functions/.env
 
 /generated/prisma
+
+# Cloudflare
+.wrangler/

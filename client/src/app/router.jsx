@@ -28,7 +28,6 @@ const DoctorPlan = lazy(() => import('../features/doctor/pages/DoctorPlan'));
 const DoctorClinic = lazy(() => import('../features/doctor/pages/DoctorClinic'));
 
 const PrescriptionView = lazy(() => import('../features/patient/pages/PrescriptionView'));
-const MockPay = lazy(() => import('../features/patient/pages/MockPay'));
 
 function Root() {
   return (
@@ -52,7 +51,6 @@ export const router = createBrowserRouter([
 
       // Patient portal (public, no login)
       { path: '/rx/:id', element: <PrescriptionView /> },
-      { path: '/mock-pay/:reference', element: <MockPay /> },
 
       // Doctor portal
       { path: '/doctor/register', element: <DoctorRegister /> },
