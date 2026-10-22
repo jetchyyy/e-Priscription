@@ -604,6 +604,13 @@
 @media (hover: hover) { .ody .foot__col a:hover { text-decoration: underline; text-underline-offset: .25em; } }
 .ody .foot__about { grid-column: 9 / span 4; font-size: 15px; color: var(--mist); }
 .ody .foot__about p + p { margin-top: 12px; }
+/* BIR registration seal, transparent on the navy footer. The whole seal links to BIR's verification page. */
+.ody .foot__seal { display: grid; justify-items: start; gap: 12px; width: min(100%, 380px); margin-top: 28px;
+  text-decoration: none; border-radius: 12px; transition: opacity .15s ease; }
+.ody .foot__seal img { display: block; width: 100%; height: auto; }
+.ody .foot__seal span { font: 600 12px/1.3 var(--f-text); letter-spacing: .14em; text-transform: uppercase; color: var(--mist); }
+@media (hover: hover) { .ody .foot__seal:hover { opacity: .85; } .ody .foot__seal:hover span { color: var(--warm); } }
+.ody .foot__seal:focus-visible { outline: 3px solid var(--orange); outline-offset: 6px; }
 .ody .foot__credits { margin-top: 48px; font-size: 15px; color: var(--mist); max-width: 120ch; }
 .ody .foot__credits a { text-decoration: underline; text-underline-offset: .2em; }
 .ody .foot__last { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 15px; color: var(--mist); }

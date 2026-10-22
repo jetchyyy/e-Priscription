@@ -337,6 +337,8 @@ export function DepartmentsCard() {
   );
 }
 
+const BIR_VERIFY_URL = 'https://verify.bir.gov.ph/correspondence/c9241e25c7124474aa284e88c4872cc8';
+
 export function SiteFooter() {
   return (
     <footer className="foot wrap on-navy">
@@ -380,6 +382,13 @@ export function SiteFooter() {
         <div className="foot__about">
           <p>E-Prescription is built by ODYSSEY, which designs and builds websites, applications and business systems.</p>
           <p>Prescriptions hold personal health information protected under the Data Privacy Act of 2012 (RA 10173). E-Prescription is software and does not replace a physician’s judgment.</p>
+          {/* BIR registration seal, required for businesses selling online. Lettering is drawn light for the navy
+              footer and the QR keeps a light tile so it scans. It opens BIR's own verification page (the QR's link). */}
+          <a className="foot__seal" href={BIR_VERIFY_URL} target="_blank" rel="noopener noreferrer"
+            aria-label="BIR registered business, 2026. Verify on the Bureau of Internal Revenue website (opens in a new tab)">
+            <img src="/bir-registered-2026-navy.png" alt="" width="990" height="300" loading="lazy" />
+            <span>BIR registered · Tap or scan to verify</span>
+          </a>
         </div>
       </div>
       <div className="foot__last">
