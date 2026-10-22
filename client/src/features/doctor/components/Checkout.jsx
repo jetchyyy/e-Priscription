@@ -28,7 +28,8 @@ export function Checkout({ request, onClose }) {
     onError: (e) => setError(e?.message || 'Could not open the payment page. Please try again.'),
   });
 
-  if (request && !cfg.isLoading && (!online || manual)) {
+  if (!request) return null; // closed: nothing to show (the window's contents read request.amount)
+  if (!cfg.isLoading && (!online || manual)) {
     return <PlanCheckout request={request} onClose={onClose} />;
   }
 

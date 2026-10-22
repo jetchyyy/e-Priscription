@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import DoctorEarnings from './features/doctor/pages/DoctorEarnings';
 import AdminMoney from './features/admin/pages/AdminMoney';
 import { OnlinePay } from './features/patient/components/OnlinePay';
+import { Checkout } from './features/doctor/components/Checkout';
 
 const methods = [{ method: 'qrph', label: 'QR Ph', fee_pct: 3, fee_fixed: 0, fee_min: 20 }, { method: 'card', label: 'Visa / Mastercard', fee_pct: 5.5, fee_fixed: 15, fee_min: 0 }];
 const wrap = (el, seed) => {
@@ -59,5 +60,10 @@ describe('new screens render with sample data', () => {
     expect(t).toContain('Convenience fee, QR Ph');
     expect(t).toContain('Pay ₱520.00 with QR Ph');
     expect(t).toContain('not refundable');
+  });
+
+  it('plan checkout renders nothing while closed (regression: reading amount of null)', () => {
+    const html = wrap(<Checkout request={null} onClose={() => {}} />, (qc) => qc.setQueryData(['gateway-config'], { enabled: true, manual_fallback: true, methods }));
+    expect(html).toBe('');
   });
 });
