@@ -51,6 +51,7 @@ const S = [
           <li>Clinic or hospital name and address, shown on the prescriptions you issue.</li>
           <li>Payment QR codes, provider, account name and number you choose to add, so patients can pay you.</li>
           <li>Plan, billing and transaction records, including the receipt screenshot and reference number you send when you pay for a plan.</li>
+          <li>If you accept online payments: your choice of who pays the fee, the date you accepted the collection terms, the bank or e-wallet account where we send your payouts (bank, account name and number), and a record of every payment, payout and refund.</li>
           <li>Clinic membership: the clinic you belong to, invitations sent to your email, and any monthly prescription share the clinic owner sets for you.</li>
         </ul>
         <h3>About patients, entered by the physician</h3>
@@ -64,7 +65,7 @@ const S = [
         </p>
         <h3>When a patient opens a link</h3>
         <ul>
-          <li>Payment status, amount, payment reference and time of payment. We do not receive card numbers or e-wallet passwords; the payment provider handles those.</li>
+          <li>Payment status, amount, payment method, payment reference and time of payment. We do not receive card numbers or e-wallet passwords; the payment provider handles those.</li>
           <li>
             The reference number and the receipt screenshot the patient sends as proof of payment. A screenshot may show the
             payer’s name and part of their mobile or account number. It is read on the patient’s own device to fill in the
@@ -116,6 +117,7 @@ const S = [
         <ul>
           <li><strong>The physician and the patient</strong> the prescription belongs to. A pharmacy sees it only when the patient shows or prints it.</li>
           <li><strong>Payment providers</strong> (e-wallets and banks the physician chose), only the data needed to process and confirm the payment.</li>
+          <li><strong>PayMongo Philippines, Inc.</strong>, which processes online payments, payouts to physicians and refunds. It receives the amount, a payment reference and, for payouts, the physician’s account name and number. It does not receive the prescription.</li>
           <li>
             <strong>Service providers that host and run the Service for us</strong>, such as our cloud database and hosting
             provider and our email provider. They act under written agreements, process data only on our instructions and must

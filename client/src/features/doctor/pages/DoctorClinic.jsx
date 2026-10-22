@@ -10,7 +10,7 @@ import {
   cancelClinicInvite, endClinic, fetchMyClinic, inviteDoctor, leaveClinic, quoteExtraSeats, removeClinicMember,
   renameClinic, requestExtraSeats, setMemberCap, transferClinicOwner,
 } from '../api';
-import { PlanCheckout } from '../components/PlanCheckout';
+import { Checkout } from '../components/Checkout';
 import { myPlanQuery } from '../components/PlanUsage';
 
 const n = (v) => Number(v).toLocaleString('en-PH');
@@ -184,6 +184,7 @@ function Seats({ c, pending }) {
     amount: quote.data,
     footnote: 'We check the payment in our account, usually within one business day. The seats are added once we confirm it.',
     send: (args) => requestExtraSeats({ seats: count, ...args }),
+    online: { type: 'seats', seats: count },
   });
 
   return (
@@ -206,7 +207,7 @@ function Seats({ c, pending }) {
         <Button variant="accent" disabled={!quote.data || pending || !c.covered} onClick={open}>Pay for {count} seat{count === 1 ? '' : 's'}</Button>
         {pending && <p className="w-full text-sm text-[#45546a]">You have a payment waiting for ODYSSEY. You can pay for seats once it is reviewed.</p>}
       </div>
-      <PlanCheckout request={checkout} onClose={() => setCheckout(null)} />
+      <Checkout request={checkout} onClose={() => setCheckout(null)} />
     </section>
   );
 }

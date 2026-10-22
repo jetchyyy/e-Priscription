@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Lock, Printer, QrCode, RefreshCw, Stethoscope, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicLayout } from '../../../components/layout/PublicLayout';
@@ -14,6 +15,7 @@ import { BlurredPrescription } from '../components/BlurredPrescription';
 import { PaymentQrModal } from '../components/PaymentQrModal';
 import { PrescriptionContent } from '../components/PrescriptionContent';
 import { PinUnlockCard } from '../components/PinUnlockCard';
+import { cameBackFromCheckout, clearCheckoutFlag, fetchRxOnlineOptions, gatewayConfigQuery } from '../../billing/gateway';
 
 export default function PrescriptionView() {
   const { id } = useParams();
@@ -38,25 +40,46 @@ export default function PrescriptionView() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const sawUnpaid = useRef(false);
+  // Back from PayMongo's page: the webhook usually lands within seconds; the page polls until it does.
+  const [returning] = useState(() => cameBackFromCheckout());
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!returning) return undefined;
+    const t = setTimeout(() => setSlow(true), 45_000);
+    return () => clearTimeout(t);
+  }, [returning]);
+
+  const needsPayment = Boolean(rx) && rx.status === 'unpaid' && !rx.is_owner;
+  const onlineQ = useQuery({
+    queryKey: ['rx-online', id],
+    queryFn: () => fetchRxOnlineOptions(id),
+    enabled: valid && needsPayment,
+    staleTime: 30_000,
+  });
+  const cfgQ = useQuery({ ...gatewayConfigQuery, enabled: valid && needsPayment });
+  const online = onlineQ.data?.methods?.length ? onlineQ.data : null;
+  const allowManual = !online || Boolean(cfgQ.data?.manual_fallback);
   const [justUnlocked, setJustUnlocked] = useState(false);
 
   // Unpaid and no receipt waiting for review: open the payment window straight away
   useEffect(() => {
-    if (rx && rx.status === 'unpaid' && rx.payment_proof?.status !== 'pending') {
+    // Wait for the online options so the window opens on the right way to pay.
+    if (rx && rx.status === 'unpaid' && rx.payment_proof?.status !== 'pending' && !returning && !onlineQ.isLoading) {
       setModalOpen(true);
     }
-  }, [rx?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rx?.status, onlineQ.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (rx?.status === 'unpaid') sawUnpaid.current = true;
+    if (rx?.status === 'paid' && returning) clearCheckoutFlag();
     if (rx?.status === 'paid' && sawUnpaid.current) {
       sawUnpaid.current = false;
       setModalOpen(false);
       if (!rx.requires_pin || !rx.is_locked_by_pin) {
         setJustUnlocked(true);
-        toast.success('Your doctor confirmed your payment. Your prescription is open.');
+        toast.success(returning ? 'Payment received. Your prescription is open.' : 'Your doctor confirmed your payment. Your prescription is open.');
       } else {
-        toast.success('Your doctor confirmed your payment. Enter the PIN they gave you to open it.');
+        toast.success(returning ? 'Payment received. Enter the PIN your doctor gave you to open it.' : 'Your doctor confirmed your payment. Enter the PIN they gave you to open it.');
       }
     }
   }, [rx?.status, rx?.requires_pin, rx?.is_locked_by_pin]);
@@ -199,17 +222,34 @@ export default function PrescriptionView() {
                 <Lock className="h-7 w-7" aria-hidden="true" />
               </span>
               <h2 className="mt-3 text-xl font-semibold text-ink-900">
-                {rx.payment_proof?.status === 'pending' ? 'Waiting for your doctor' : 'Prescription locked'}
+                {returning ? 'Confirming your payment' : rx.payment_proof?.status === 'pending' ? 'Waiting for your doctor' : 'Prescription locked'}
               </h2>
               <p className="mt-1 text-sm text-ink-500">
                 {rx.medicine_count} medicine{rx.medicine_count === 1 ? '' : 's'} for <span className="font-medium text-ink-700">{rx.patient_hint}</span>
               </p>
-              {rx.payment_proof?.status === 'pending' && (
+              {returning && (
+                <p role="status" aria-live="polite" className="mt-2 text-sm text-ink-600">
+                  {slow
+                    ? 'This is taking longer than usual. If PayMongo showed your payment as successful, keep this page open. It opens by itself once the payment arrives. If you did not finish paying, you can try again.'
+                    : 'PayMongo is sending us your payment. This usually takes a few seconds. Please keep this page open.'}
+                </p>
+              )}
+              {!returning && rx.payment_proof?.status === 'pending' && (
                 <p className="mt-2 text-sm text-ink-600">Your receipt was sent. This page opens your prescription once your doctor confirms the payment.</p>
               )}
-              <Button size="lg" className="mt-5 w-full" onClick={() => setModalOpen(true)}>
-                {rx.payment_proof?.status === 'pending' ? 'View payment status' : `Pay ${formatPeso(rx.amount)} to unlock`}
-              </Button>
+              {returning && !slow ? (
+                <Spinner label="Waiting for the payment" className="mx-auto mt-5 [&>svg]:h-7 [&>svg]:w-7" />
+              ) : (
+                <Button size="lg" className="mt-5 w-full" variant={returning ? 'secondary' : 'primary'} onClick={() => setModalOpen(true)}>
+                  {rx.payment_proof?.status === 'pending'
+                    ? 'View payment status'
+                    : returning
+                      ? 'Try paying again'
+                      : online
+                        ? 'Pay to unlock'
+                        : `Pay ${formatPeso(rx.amount)} to unlock`}
+                </Button>
+              )}
               {rx.requires_pin && (
                 <p className="mt-3 text-xs text-ink-400">
                   Doctor's PIN will be required after payment to open.
@@ -220,7 +260,7 @@ export default function PrescriptionView() {
         </div>
       )}
 
-      <PaymentQrModal open={modalOpen} onClose={() => setModalOpen(false)} rx={rx} />
+      <PaymentQrModal open={modalOpen} onClose={() => setModalOpen(false)} rx={rx} online={online} allowManual={allowManual} />
     </PublicLayout>
   );
 }

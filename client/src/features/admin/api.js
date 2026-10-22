@@ -57,7 +57,10 @@ export async function fetchPlanRequests(status = 'pending') {
     .select('*, doctor:profiles!plan_requests_doctor_id_fkey(full_name, email, clinic_name), pack:rx_packs(name)')
     .order('created_at', { ascending: status === 'pending' })
     .limit(100);
-  if (status !== 'all') q = q.eq('status', status);
+  // Waiting: receipts to check, and online payments that could not be applied by themselves.
+  if (status === 'pending') q = q.in('status', ['pending', 'paid_needs_review']);
+  else if (status === 'all') q = q.neq('status', 'awaiting_payment');
+  else q = q.eq('status', status);
   const { data, error } = await q;
   if (error) throw error;
   return data;
@@ -195,4 +198,71 @@ export async function savePack(pack, { isNew = false } = {}) {
   const { data, error } = await q.select().single();
   if (error) throw error;
   return data;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Online payments, payouts, refunds and taxes (migration 0010)
+// ---------------------------------------------------------------------------------------------------------
+const rpc = async (name, args) => {
+  const { data, error } = await db().rpc(name, args);
+  if (error) throw error;
+  return data;
+};
+
+export const fetchMoneyOverview = () => rpc('admin_money_overview');
+export const fetchGatewayAdminConfig = () => rpc('admin_gateway_config');
+export const fetchGatewayPayments = (filter = 'all') => rpc('admin_gateway_payments', { p_filter: filter });
+export const fetchAdminPayouts = (filter = 'open') => rpc('admin_payouts', { p_filter: filter });
+export const fetchDoctorBalances = () => rpc('admin_doctor_balances');
+export const fetchTaxSummary = (year) => rpc('admin_tax_summary', { p_year: year });
+
+export const saveGatewaySettings = (s) => rpc('admin_set_gateway_settings', {
+  p_enabled: s.enabled, p_manual_fallback: s.manual_fallback, p_hold_days: Number(s.hold_days),
+  p_min_payout: Number(s.min_payout), p_payout_fee: Number(s.payout_fee),
+});
+
+export const saveFeeRate = (r) => rpc('admin_set_fee_rate', {
+  p_method: r.method, p_enabled: r.is_enabled, p_fee_pct: Number(r.fee_pct), p_fee_fixed: Number(r.fee_fixed),
+  p_fee_min: Number(r.fee_min), p_cost_pct: Number(r.cost_pct), p_cost_fixed: Number(r.cost_fixed),
+});
+
+export const rejectPayout = ({ id, note }) => rpc('admin_reject_payout', { p_id: id, p_note: note || null });
+export const resolvePayout = ({ id, sent, reference, note }) =>
+  rpc('admin_resolve_payout', { p_id: id, p_sent: sent, p_reference: reference || null, p_note: note || null });
+
+export async function fetchExpenses(year) {
+  const { data, error } = await db()
+    .from('business_expenses')
+    .select('*')
+    .gte('spent_on', `${year}-01-01`)
+    .lte('spent_on', `${year}-12-31`)
+    .order('spent_on', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function addExpense({ spentOn, category, description, amount, file }) {
+  let receipt_path = null;
+  if (file) {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    receipt_path = `${spentOn.slice(0, 4)}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await db().storage.from('expense-receipts').upload(receipt_path, file, { contentType: file.type });
+    if (upErr) throw new Error('Could not upload the receipt. Try again.');
+  }
+  const { error } = await db().from('business_expenses').insert({
+    spent_on: spentOn, category, description: description.trim(), amount: Number(amount), receipt_path,
+  });
+  if (error) throw error;
+}
+
+export async function deleteExpense(e) {
+  const { error } = await db().from('business_expenses').delete().eq('id', e.id);
+  if (error) throw error;
+  if (e.receipt_path) await db().storage.from('expense-receipts').remove([e.receipt_path]);
+}
+
+export async function expenseReceiptUrl(path) {
+  const { data, error } = await db().storage.from('expense-receipts').createSignedUrl(path, 300);
+  if (error) throw error;
+  return data.signedUrl;
 }

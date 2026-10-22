@@ -1,11 +1,14 @@
 project_id = "e-reseta"
 
-# Both functions authenticate themselves (HMAC signature / mock flag),
-# so Supabase's JWT check must be off.
+# These functions check who is calling themselves (PayMongo signature, or the caller's own login checked by the
+# database), so Supabase's JWT check is off.
 [functions.payment-webhook]
 verify_jwt = false
 
-[functions.mock-gateway]
+[functions.paymongo-checkout]
+verify_jwt = false
+
+[functions.paymongo-ops]
 verify_jwt = false
 
 [functions.register-doctor]

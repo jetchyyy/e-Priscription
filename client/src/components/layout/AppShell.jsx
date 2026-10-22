@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, FilePlus2, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2 } from 'lucide-react';
+import { LayoutDashboard, FilePlus2, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../../store/authStore';
@@ -12,12 +12,14 @@ const doctorNav = [
   { to: '/doctor/new', label: 'New prescription', icon: FilePlus2, tourId: 'nav-new' },
   { to: '/doctor/profile', label: 'Doctor & Clinic Details', icon: Stethoscope, tourId: 'nav-profile' },
   { to: '/doctor/qr-codes', label: 'Payment QR Codes', icon: QrCode, tourId: 'nav-qr' },
+  { to: '/doctor/earnings', label: 'Earnings and payouts', icon: Wallet },
   { to: '/doctor/plan', label: 'Plan and usage', icon: Gauge },
   { to: '/doctor/clinic', label: 'Clinic', icon: Building2 },
 ];
 const adminNav = [
   { to: '/admin', label: 'Doctor approvals', icon: ShieldCheck, end: true },
   { to: '/admin/billing', label: 'Plans and billing', icon: ReceiptText },
+  { to: '/admin/money', label: 'Money and payouts', icon: Landmark },
 ];
 
 function AppShellInner() {

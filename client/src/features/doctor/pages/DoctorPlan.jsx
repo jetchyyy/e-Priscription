@@ -8,7 +8,8 @@ import { usePublicPlans } from '../../billing/usePlans';
 import { packsQuery, perRx, planPrice } from '../../billing/api';
 import { cancelPlanRequest, fetchMyClinic, requestPlan, requestRxPack } from '../api';
 import { PlanUsage, myPlanQuery } from '../components/PlanUsage';
-import { PlanCheckout } from '../components/PlanCheckout';
+import { Checkout } from '../components/Checkout';
+import { cameBackFromCheckout, clearCheckoutFlag } from '../../billing/gateway';
 
 const n = (v) => Number(v).toLocaleString('en-PH');
 const isClinicPlan = (p) => p.doctors > 1;
@@ -46,12 +47,23 @@ function RequestStatus({ req, plans }) {
       </div>
     );
   }
+  if (req.status === 'paid_needs_review') {
+    return (
+      <div role="status" className="rounded-[20px] bg-[#ece7de] p-5">
+        <p className="font-display text-lg font-semibold text-[#152839]">Payment received. ODYSSEY is checking it.</p>
+        <p className="mt-1 text-sm text-[#45546a]">
+          {what} · {formatPeso(req.amount)}. We could not apply it by itself, so a person will look at it soon.
+          If it cannot be applied, the full amount is refunded.
+        </p>
+      </div>
+    );
+  }
   if (req.status === 'rejected') {
     return (
       <div role="alert" className="rounded-[18px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
         <p className="font-semibold">We could not confirm your payment for {what}</p>
         {req.review_note && <p className="mt-1">{req.review_note}</p>}
-        <p className="mt-1">Check your receipt and send it again, or reply to our email.</p>
+        <p className="mt-1">{req.channel === 'gateway' ? 'If you were charged, the payment is refunded to you.' : 'Check your receipt and send it again, or reply to our email.'}</p>
       </div>
     );
   }
@@ -133,7 +145,8 @@ function Packs({ owner, pending, onBuy }) {
 
 export default function DoctorPlan() {
   const plans = usePublicPlans();
-  const { data: current } = useQuery(myPlanQuery);
+  const [returning, setReturning] = useState(() => cameBackFromCheckout());
+  const { data: current } = useQuery({ ...myPlanQuery, refetchInterval: returning ? 3000 : myPlanQuery.refetchInterval });
   const clinicQ = useQuery({ queryKey: ['doctor', 'clinic'], queryFn: fetchMyClinic });
   const [period, setPeriod] = useState('monthly');
   const [seats, setSeats] = useState(null);   // null: use the clinic's current extra seats
@@ -159,8 +172,23 @@ export default function DoctorPlan() {
         ? 'We check the payment in our account, usually within one business day. Your clinic starts on the day we confirm it, and you can then invite doctors.'
         : undefined,
       send: (args) => requestPlan({ planId: p.id, period, extraSeats: extra, ...args }),
+      online: { type: 'plan', plan_id: p.id, period, seats: extra },
     });
   };
+
+  // Back from PayMongo: wait (polling) until the webhook has applied the payment, at most two minutes.
+  const latest = current?.latest_request;
+  useEffect(() => {
+    if (!returning) return undefined;
+    if (latest && latest.status === 'approved' && Date.now() - new Date(latest.reviewed_at).getTime() < 10 * 60_000) {
+      toast.success(latest.kind === 'rx_pack' ? 'Payment received. Your prescriptions were added.' : 'Payment received. Your plan is updated.');
+      clearCheckoutFlag();
+      setReturning(false);
+      return undefined;
+    }
+    const t = setTimeout(() => { clearCheckoutFlag(); setReturning(false); }, 120_000);
+    return () => clearTimeout(t);
+  }, [returning, latest?.status, latest?.reviewed_at]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Links such as /doctor/plan#packs scroll to their section once the page has drawn it.
   useEffect(() => {
@@ -173,6 +201,7 @@ export default function DoctorPlan() {
     amount: p.price * count,
     footnote: 'We check the payment in our account, usually within one business day. The prescriptions are added once we confirm it.',
     send: (args) => requestRxPack({ packId: p.id, quantity: count, ...args }),
+    online: { type: 'pack', pack_id: p.id, quantity: count },
   });
 
   if (role === 'doctor') {
@@ -205,6 +234,12 @@ export default function DoctorPlan() {
 
       <PlanUsage />
 
+      {returning && (
+        <div role="status" aria-live="polite" className="rounded-[20px] bg-[#ece7de] p-5">
+          <p className="font-display text-lg font-semibold text-[#152839]">Confirming your payment</p>
+          <p className="mt-1 text-sm text-[#45546a]">PayMongo is sending us your payment. This page updates by itself, usually within a minute.</p>
+        </div>
+      )}
       {current?.latest_request && <RequestStatus req={current.latest_request} plans={plans} />}
 
       <section aria-labelledby="choose-h" className="space-y-4">
@@ -290,7 +325,7 @@ export default function DoctorPlan() {
 
       <Packs owner={role === 'owner'} pending={pending} onBuy={buyPack} />
 
-      <PlanCheckout request={checkout} onClose={() => setCheckout(null)} />
+      <Checkout request={checkout} onClose={() => setCheckout(null)} />
     </div>
   );
 }

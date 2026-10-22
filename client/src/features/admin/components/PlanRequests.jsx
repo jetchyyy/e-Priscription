@@ -10,7 +10,11 @@ const REASONS = [
   'The amount paid is different from the plan price',
   'The screenshot is unreadable',
 ];
-const STATUS_TEXT = { approved: 'Approved', rejected: 'Not approved', cancelled: 'Withdrawn by doctor' };
+const ONLINE_REASONS = [
+  'We could not apply this payment. The full amount is being refunded.',
+  'This was paid twice. The second payment is being refunded.',
+];
+const STATUS_TEXT = { approved: 'Approved', rejected: 'Not approved', cancelled: 'Withdrawn by doctor', paid_needs_review: 'Paid online, needs review' };
 
 function Receipt({ path }) {
   const url = useQuery({ queryKey: ['plan-proof-url', path], queryFn: () => getPlanProofUrl(path), staleTime: 4 * 60_000 });
@@ -26,8 +30,9 @@ function Receipt({ path }) {
 function RequestCard({ req, planName }) {
   const qc = useQueryClient();
   const [rejecting, setRejecting] = useState(false);
-  const [reason, setReason] = useState(REASONS[0]);
-  const isPending = req.status === 'pending';
+  const [reason, setReason] = useState(req.channel === 'gateway' ? ONLINE_REASONS[0] : REASONS[0]);
+  const isPending = req.status === 'pending' || req.status === 'paid_needs_review';
+  const online = req.channel === 'gateway';
   const amountMatches = req.amount_read != null && Number(req.amount_read) === Number(req.amount);
 
   const review = useMutation({
@@ -49,7 +54,11 @@ function RequestCard({ req, planName }) {
 
   return (
     <li className="flex flex-col gap-4 rounded-[20px] border border-[#dce1e8] bg-white p-5 sm:flex-row">
-      <Receipt path={req.screenshot_path} />
+      {online ? (
+        <div className="flex h-40 w-28 shrink-0 items-center justify-center rounded-[14px] bg-[#152839] p-3 text-center text-xs font-semibold text-[#f9f8f3]">Paid online through PayMongo</div>
+      ) : (
+        <Receipt path={req.screenshot_path} />
+      )}
       <div className="min-w-0 flex-1 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -70,20 +79,20 @@ function RequestCard({ req, planName }) {
             </dd>
           </div>
           <div><dt className="text-sm text-[#45546a]">Price</dt><dd className="font-semibold tabular-nums text-[#152839]">{formatPeso(req.amount)}</dd></div>
-          <div><dt className="text-sm text-[#45546a]">Reference number</dt><dd className="font-semibold tabular-nums text-[#152839]">{req.reference_no}</dd></div>
+          <div><dt className="text-sm text-[#45546a]">{online ? 'Payment' : 'Reference number'}</dt><dd className="font-semibold tabular-nums text-[#152839]">{online ? 'PayMongo' : req.reference_no}</dd></div>
         </dl>
         {req.amount_read != null && (
           <p className={cn('text-sm', amountMatches ? 'text-[#45546a]' : 'text-[#7a2406]')}>
             {amountMatches ? `The receipt shows ${formatPeso(req.amount_read)}.` : `The receipt seems to show ${formatPeso(req.amount_read)}, not ${formatPeso(req.amount)}. Check it in the account.`}
           </p>
         )}
-        {req.review_note && !isPending && <p className="text-sm text-[#45546a]">Note: {req.review_note}</p>}
+        {req.review_note && (!isPending || online) && <p className={cn('text-sm', online && isPending ? 'text-[#7a2406]' : 'text-[#45546a]')}>Note: {req.review_note}</p>}
 
         {isPending && (rejecting ? (
           <div className="space-y-3">
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-[#152839]">Reason shown to the doctor</legend>
-              {REASONS.map((r) => (
+              {(online ? ONLINE_REASONS : REASONS).map((r) => (
                 <label key={r} className="flex items-start gap-2 text-[15px] text-[#152839]">
                   <input type="radio" name={`reason-${req.id}`} className="mt-1 accent-[#152839]" checked={reason === r} onChange={() => setReason(r)} />
                   {r}
@@ -97,10 +106,14 @@ function RequestCard({ req, planName }) {
           </div>
         ) : (
           <>
-            <p className="text-sm text-[#45546a]">Find this reference number in the {req.provider ?? 'ODYSSEY'} account before approving. A screenshot alone is not proof.</p>
+            <p className="text-sm text-[#45546a]">
+              {online
+                ? 'PayMongo confirmed this payment, but it could not be applied by itself. Fix the cause (for example, renew the clinic), then approve. If you reject it, refund it in Money and payouts.'
+                : `Find this reference number in the ${req.provider ?? 'ODYSSEY'} account before approving. A screenshot alone is not proof.`}
+            </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="primary" loading={review.isPending} onClick={() => review.mutate({ id: req.id, approve: true })}>{req.kind === 'extra_seats' ? 'Payment received, add seats' : req.kind === 'rx_pack' ? 'Payment received, add prescriptions' : 'Payment received, start plan'}</Button>
-              <Button variant="secondary" onClick={() => setRejecting(true)}>Not received</Button>
+              <Button variant="secondary" onClick={() => setRejecting(true)}>{online ? 'Reject' : 'Not received'}</Button>
             </div>
           </>
         ))}

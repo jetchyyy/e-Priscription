@@ -511,3 +511,45 @@ export async function requestRxPack({ packId, quantity = 1, reference, file, met
   if (error) throw error;
   return data;
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Online payments, earnings and payouts (migration 0010)
+// ---------------------------------------------------------------------------------------------------------
+export async function fetchMyEarnings() {
+  const { data, error } = await db().rpc('my_earnings');
+  if (error) throw error;
+  return data;
+}
+
+export const earningsQuery = { queryKey: ['doctor', 'earnings'], queryFn: fetchMyEarnings };
+
+export async function setOnlinePayments({ enabled, feeMode, acceptTerms = false }) {
+  const { error } = await db().rpc('set_online_payments', { p_enabled: enabled, p_fee_mode: feeMode, p_accept_terms: acceptTerms });
+  if (error) throw error;
+}
+
+export async function setPayoutAccount({ provider, bankCode, bankName, accountName, accountNumber }) {
+  const { error } = await db().rpc('set_payout_account', {
+    p_provider: provider, p_bank_code: bankCode, p_bank_name: bankName,
+    p_account_name: accountName, p_account_number: accountNumber,
+  });
+  if (error) throw error;
+}
+
+export async function requestPayout(amount) {
+  const { data, error } = await db().rpc('request_payout', { p_amount: amount });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelPayout(id) {
+  const { error } = await db().rpc('cancel_payout', { p_id: id });
+  if (error) throw error;
+}
+
+/** month: 'YYYY-MM' */
+export async function fetchStatement(month) {
+  const { data, error } = await db().rpc('my_statement', { p_month: `${month}-01` });
+  if (error) throw error;
+  return data;
+}

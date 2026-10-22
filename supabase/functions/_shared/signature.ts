@@ -1,13 +1,10 @@
+// PayMongo webhook signatures.
+// Header: Paymongo-Signature: t=<unix seconds>,te=<test signature>,li=<live signature>
+// Each signature is HMAC-SHA256 of "<t>.<raw body>" with the webhook's secret key, as lowercase hex.
 export const encoder = new TextEncoder();
 
 export async function hmacHex(secret: string, payload: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -20,28 +17,24 @@ export function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Header format: `t=<unix-seconds>,v1=<hex hmac of "<t>.<rawBody>">` */
-export async function signBody(secret: string, rawBody: string): Promise<string> {
-  const t = Math.floor(Date.now() / 1000);
-  const v1 = await hmacHex(secret, `${t}.${rawBody}`);
-  return `t=${t},v1=${v1}`;
+export function parseSignatureHeader(header: string): { t: string; te: string; li: string } {
+  const parts: Record<string, string> = {};
+  for (const kv of header.split(',')) {
+    const i = kv.indexOf('=');
+    if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
+  }
+  return { t: parts.t ?? '', te: parts.te ?? '', li: parts.li ?? '' };
 }
 
-export async function verifySignature(
-  secret: string,
-  rawBody: string,
-  header: string,
-  toleranceSeconds = 300,
-): Promise<boolean> {
-  const parts = Object.fromEntries(
-    header.split(',').map((kv) => {
-      const i = kv.indexOf('=');
-      return [kv.slice(0, i).trim(), kv.slice(i + 1).trim()];
-    }),
-  );
-  const t = Number(parts.t);
-  if (!t || !parts.v1) return false;
-  if (Math.abs(Date.now() / 1000 - t) > toleranceSeconds) return false; // replay protection
+/**
+ * Verifies the raw body before anything parses it. Returns which mode signed it ('test' or 'live'), or null.
+ * Replays are harmless: every event is handled once by its id in the database.
+ */
+export async function verifyPaymongoSignature(secret: string, rawBody: string, header: string): Promise<'test' | 'live' | null> {
+  const { t, te, li } = parseSignatureHeader(header);
+  if (!/^\d+$/.test(t)) return null;
   const expected = await hmacHex(secret, `${t}.${rawBody}`);
-  return timingSafeEqual(parts.v1, expected);
+  if (li && timingSafeEqual(li, expected)) return 'live';
+  if (te && timingSafeEqual(te, expected)) return 'test';
+  return null;
 }

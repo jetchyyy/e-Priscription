@@ -124,6 +124,10 @@ const S = [
     body: (
       <>
         <p>
+          If the physician accepts online payments, the patient pays through ODYSSEY as described in{' '}
+          <a href="#online-payments" className="link">Online payments through ODYSSEY</a>. Otherwise, the rest of this section applies.
+        </p>
+        <p>
           The patient pays the access fee set by the physician, using the GCash, Maya or bank QR the physician uploaded.
           Payment goes to the physician’s account. ODYSSEY is not a party to that payment, does not hold patients’ money,
           and is not responsible for refunds, disputes or chargebacks between patients and physicians. Payment providers are
@@ -147,18 +151,62 @@ const S = [
     ),
   },
   {
+    id: 'online-payments',
+    title: 'Online payments through ODYSSEY',
+    body: (
+      <>
+        <p>
+          A physician may choose to accept online payments. The patient then pays through PayMongo, a payment provider
+          regulated by the Bangko Sentral ng Pilipinas, and the prescription opens as soon as PayMongo confirms the payment.
+          No receipt needs to be checked.
+        </p>
+        <h3>ODYSSEY as collecting agent</h3>
+        <ul>
+          <li>By turning on online payments, the physician appoints ODYSSEY to collect patients’ payments for the physician as the physician’s collecting agent.</li>
+          <li>The physician’s share of each payment belongs to the physician and is the physician’s income. ODYSSEY holds it for the physician until it is paid out, and does not treat it as ODYSSEY’s income.</li>
+          <li>ODYSSEY’s income is only its service fee on each payment, and what physicians pay ODYSSEY for plans, seats and packs.</li>
+          <li>Each physician is responsible for their own taxes on their share, and for any receipt the law requires them to issue to their patients for their professional fee.</li>
+        </ul>
+        <h3>Fees</h3>
+        <ul>
+          <li>ODYSSEY charges a service fee on each online payment. The fee depends on the payment method and is shown to the physician in the dashboard and to the patient before paying. PayMongo’s own charge is included in it.</li>
+          <li>The physician chooses who pays the fee. If the patient pays it, it is added on top as a convenience fee and the physician receives the full prescription fee. If the physician covers it, the patient pays only the prescription fee and the service fee comes out of the physician’s share.</li>
+          <li>Each payment keeps the fee in force when it was made. ODYSSEY will give physicians at least 30 days’ notice of a fee increase.</li>
+          <li>ODYSSEY is not registered for VAT and does not charge VAT on its fees.</li>
+        </ul>
+        <h3>Hold period and payouts</h3>
+        <ul>
+          <li>The physician’s share becomes available for payout after a hold period, shown in the dashboard (7 days at the time of writing). The hold covers the time PayMongo takes to settle payments and the time in which card payments can be disputed.</li>
+          <li>The physician asks for a payout from the dashboard, to a bank or e-wallet account in the physician’s own name. ODYSSEY checks each request before sending it, and may hold a payout while it checks an account that does not match the physician’s verified name.</li>
+          <li>The smallest payout and the transfer fee are shown in the dashboard. The transfer fee is taken from the amount sent.</li>
+          <li>The dashboard shows every payment, ODYSSEY’s fee, the physician’s share, what is on hold, what is available, every payout and every refund. A monthly statement can be downloaded.</li>
+        </ul>
+        <h3 id="refunds">Refunds and disputes</h3>
+        <ul>
+          <li>Refunds are made by ODYSSEY, through PayMongo, back to the account that paid. Service and convenience fees are not refunded: the patient receives the prescription fee back, and the physician’s balance covers it.</li>
+          <li>If a refund or a card dispute is larger than the physician’s available balance, the difference is taken from the physician’s next payments.</li>
+          <li>A payment that cannot be applied, such as a second payment for a prescription already paid, is refunded in full.</li>
+          <li>Refunds for QR Ph payments are claimed by the payer through a link PayMongo provides. The link expires after the period PayMongo sets.</li>
+        </ul>
+        <p>
+          A physician may turn online payments off at any time. Money already collected is still paid out under these terms.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'plans',
     title: 'Plans, limits and billing for physicians',
     body: (
       <>
         <p>
           Plans, prices and monthly prescription limits are shown on the <Link to="/pricing" className="link">Pricing</Link>{' '}
-          page and are part of these Terms. Prices are in Philippine pesos and include VAT unless stated otherwise.
+          page and are part of these Terms. Prices are in Philippine pesos. ODYSSEY is not registered for VAT, so no VAT is added.
         </p>
         <ul>
-          <li>You pay for a plan by scanning ODYSSEY’s payment QR and sending the receipt and reference number from your dashboard. A paid plan starts on the day we confirm the payment and runs for one month or one year. Plans do not renew by themselves; when a paid period ends, your account moves back to the free plan.</li>
+          <li>You pay for a plan online through PayMongo from your dashboard. ODYSSEY covers the payment fee. When online payment is unavailable, you may be asked to pay ODYSSEY’s QR and send the receipt instead. A paid plan starts as soon as the payment is confirmed and runs for one month or one year. Plans do not renew by themselves; when a paid period ends, your account moves back to the free plan.</li>
           <li>Monthly limits count the prescriptions you issue in each calendar month, Philippine time. When you reach your limit, you cannot issue new prescriptions until the 1st of the next month or until you upgrade. Links already sent keep working.</li>
-          <li>Renewing the same plan adds the new period after the one already paid. Changing to another plan starts the new plan on the day we confirm the payment; the unused part of the old plan is not refunded or carried over.</li>
+          <li>Renewing the same plan adds the new period after the one already paid. Changing to another plan starts the new plan on the day the payment is confirmed; the unused part of the old plan is not refunded or carried over.</li>
           <li>You may also buy packs of extra prescriptions without changing plan. The packs, prices and how long they stay valid are shown in your dashboard when you buy. Bought prescriptions are used only after your monthly limit is reached, oldest expiry first; they are tied to your account (or to your clinic, if its owner bought them), cannot be transferred or refunded, and expire at the end of the validity shown when you bought them.</li>
           <li>Sending a receipt for a payment you did not make, or reusing another person’s receipt, is prohibited and may lead to suspension of your account.</li>
           <li>We will give at least 30 days’ notice of a price increase for your plan. You may cancel before it applies.</li>
