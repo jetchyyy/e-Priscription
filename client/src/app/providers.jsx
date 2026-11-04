@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../store/authStore';
 import { isConfigured } from '../config/env';
+import { InstallAppPrompt } from '../pwa/InstallApp';
 
 function ConfigBanner() {
   if (isConfigured) return null;
@@ -28,6 +29,7 @@ export function Providers({ children }) {
       {children}
       <Toaster position="top-center" richColors closeButton toastOptions={{ className: 'font-sans' }} />
       <ConfigBanner />
+      <InstallAppPrompt />
     </QueryClientProvider>
   );
 }

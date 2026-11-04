@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -15,6 +16,12 @@ function siteUrlPlugin(siteUrl) {
     name: 'site-url',
     transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl),
     generateBundle() {
+      // Service worker: stamped with a build id so each deploy replaces the old worker and its caches.
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sw.js',
+        source: readFileSync(new URL('./src/pwa/sw.js', import.meta.url), 'utf8').replaceAll('__BUILD_ID__', Date.now().toString(36)),
+      });
       this.emitFile({
         type: 'asset',
         fileName: 'robots.txt',

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { X, Compass } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { InstallAppButton } from '../../pwa/InstallApp';
 
 function NavItems({ items, onNavigate, onOpenGuide }) {
   return (
@@ -54,6 +55,7 @@ function NavItems({ items, onNavigate, onOpenGuide }) {
       </nav>
 
       <div className="mt-auto pt-6">
+        <InstallAppButton variant="nav" className="mb-3 w-full" />
         <p className="rounded-xl bg-[#f9f8f3] p-3 text-[13px] leading-relaxed text-[#5f6a7c] border border-[#dce1e8]">
           Patient data is protected under the Data Privacy Act of 2012 (RA 10173).
         </p>

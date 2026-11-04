@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { InstallAppButton } from '../../pwa/InstallApp';
 
 /** Adds the `js` class (so entrances may hide content) and reveals [data-reveal] / .shutter once in view. */
 export function useSiteMotion() {
@@ -357,6 +358,7 @@ export function SiteFooter() {
             <li><a href="/#how">How it works</a></li>
             <li><Link to="/pricing">Pricing and limits</Link></li>
             <li><Link to="/sample">Sample prescription</Link></li>
+            <li><InstallAppButton className="text-[15px] font-normal" /></li>
           </ul>
         </div>
         <div className="foot__col">

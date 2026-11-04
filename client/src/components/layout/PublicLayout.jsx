@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { Logo } from '../ui/Logo';
+import { InstallAppButton } from '../../pwa/InstallApp';
 
 /** Simple chrome for public pages (patient view, register, 404). */
 export function PublicLayout({ children, maxWidth = 'max-w-3xl' }) {
@@ -22,6 +23,7 @@ export function PublicLayout({ children, maxWidth = 'max-w-3xl' }) {
           <Link to="/" className="underline decoration-[#dce1e8] underline-offset-2 hover:text-[#152839]">E-Prescription by ODYSSEY</Link>
           {' · '}We never share your prescription without your link.
         </p>
+        <InstallAppButton className="mt-3 font-semibold text-[#152839]" />
       </footer>
     </div>
   );
