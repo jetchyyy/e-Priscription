@@ -1687,7 +1687,8 @@ begin
   end if;
   update public.gateway_settings
      set enabled = p_enabled, manual_fallback = p_manual_fallback, hold_days = p_hold_days,
-         min_payout = p_min_payout, payout_fee = p_payout_fee, updated_at = now(), updated_by = auth.uid();
+         min_payout = p_min_payout, payout_fee = p_payout_fee, updated_at = now(), updated_by = auth.uid()
+   where id;
 end;
 $$;
 
