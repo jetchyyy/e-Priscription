@@ -12,3 +12,5 @@ supabase/functions/.env
 
 # Cloudflare
 .wrangler/
+
+showreel

@@ -131,7 +131,8 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
 
   const amountText = formatPeso(rx.amount);
 
-  const manualForm = (
+  // Only build the QR form when there is a QR: JSX props evaluate eagerly, so `method.qr_image_url` would throw on null.
+  const manualForm = method && (
     <form onSubmit={submit} noValidate className="space-y-7">
       {rejected && (
         <div role="alert" className="rounded-[18px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
