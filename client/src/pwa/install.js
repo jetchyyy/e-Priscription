@@ -23,7 +23,8 @@ export const installRoute = inApp
 
 export const isMobile = ios || android;
 
-const isStandalone = () =>
+/** True when running as the installed app, not in a browser tab. */
+export const isStandalone = () =>
   hasDom && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
 
 /** deferred: Chrome/Edge/Samsung's saved install prompt. open: the instructions sheet. */

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { isStandalone } from '../pwa/install';
 import { extractRxId } from '../lib/utils';
 import '../features/marketing/site.css';
 import {
@@ -331,6 +332,8 @@ const QUESTIONS = [
 export default function Landing() {
   const ref = useSiteMotion();
   useEffect(() => { document.title = 'E-Prescription by ODYSSEY · Prescriptions sent as a link'; }, []);
+  // The installed app skips the marketing page: sign-in, which sends signed-in users to their dashboard.
+  if (isStandalone()) return <Navigate to="/login" replace />;
   return (
     <div className="ody" ref={ref}>
       <SiteNav />

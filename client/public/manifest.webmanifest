@@ -3,7 +3,7 @@
   "short_name": "E-Prescription",
   "description": "Prescriptions sent as a link, from PRC-licensed doctors in the Philippines.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
