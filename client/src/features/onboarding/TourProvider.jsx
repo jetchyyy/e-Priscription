@@ -191,12 +191,12 @@ export function TourProvider({ children }) {
         />
       )}
 
-      {/* Steps 2 to 9: Coachmark */}
+      {/* Steps 2 onward: Coachmark */}
       {isOpen && currentStepIndex > 0 && currentStep && (
         <Coachmark
           step={currentStep}
           stepIndex={currentStep.stepNumber}
-          totalSteps={9}
+          totalSteps={SETUP_STEPS.length}
           targetEl={targetEl}
           targetNotFound={targetNotFound}
           onNext={handleNext}

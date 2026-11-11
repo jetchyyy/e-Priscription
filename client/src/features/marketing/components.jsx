@@ -414,8 +414,11 @@ export function RxSlip({
   patientAge,
   date,
   medicines,
+  labTests,
   diagnosis,
 }) {
+  const isLab = Array.isArray(labTests);
+  const tests = (labTests ?? []).filter((t) => t?.name?.trim());
   const locked = stage === 'sent';
   const displayClinic = clinicName || 'Dela Cruz Family Clinic';
   const displayDoctor = doctorName
@@ -436,7 +439,9 @@ export function RxSlip({
           <div className="rx__clinic">{displayClinic}</div>
           <div className="rx__doc">{displayDoctor}{displaySpecialty}</div>
         </div>
-        <span className="rx__symbol" aria-hidden="true">℞</span>
+        {isLab
+          ? <span className="rx__symbol" style={{ fontSize: '0.8rem', letterSpacing: '.12em' }}>LAB REQUEST</span>
+          : <span className="rx__symbol" aria-hidden="true">℞</span>}
       </div>
       <div className="rx__patient"><span>{displayPatient}</span><span className="num">{displayDate}</span></div>
       {diagnosis && (
@@ -445,7 +450,16 @@ export function RxSlip({
         </div>
       )}
       <div className={locked ? 'rx__blur' : ''} aria-hidden={locked || undefined}>
-        {medicines && medicines.length > 0 && medicines[0]?.genericName ? (
+        {isLab ? (
+          tests.length > 0 ? tests.map((t, idx) => (
+            <div key={idx} className="rx__med">
+              <b>{idx + 1}. {t.name}</b>
+              {t.notes && <span>{t.notes}</span>}
+            </div>
+          )) : (
+            <div className="rx__med"><span>Pick tests on the left to see them here.</span></div>
+          )
+        ) : medicines && medicines.length > 0 && medicines[0]?.genericName ? (
           medicines.map((m, idx) => (
             <div key={idx} className="rx__med">
               <b>{m.genericName}{m.brandName ? ` (${m.brandName})` : ''}</b>

@@ -298,7 +298,7 @@ const BILLING_QS = [
   ['Is Starter really free?', 'Yes, with no card needed. It covers a small number of prescriptions a month for one doctor, and you can upgrade when you need more.'],
   ['How do I pay for a plan?', 'From your dashboard: choose a plan, scan ODYSSEY’s GCash, Maya or bank QR, and send the receipt. Your plan starts once we confirm the payment, usually within one business day.'],
   ['Do my patients pay ODYSSEY?', 'No. Patients pay the access fee you set into your own QR. Your plan is a separate subscription.'],
-  ['What counts as one prescription?', 'Each Rx you issue counts once, however many medicines it lists and however often the patient opens it.'],
+  ['What counts as one prescription?', 'Each Rx or lab request you issue counts once, however many medicines or tests it lists and however often the patient opens it.'],
   ['Can I buy more prescriptions without upgrading?', 'Yes. From your dashboard, buy a pack of extra prescriptions by QR. They are used after your monthly limit runs out and stay valid for the time shown on the pack, so a busy month does not force a bigger plan.'],
   ['How do clinic accounts work?', 'A doctor buys the Clinic plan and becomes the owner. The owner invites colleagues by email; each keeps their own account, patients and QR. Everyone shares the clinic’s monthly prescriptions, and the owner can cap one doctor’s share. The owner sees counts and fees only, never patient details. More than five doctors need extra seats.'],
   ['Can I move between plans?', 'Any time. A new plan starts on the day we confirm your payment and runs for a month or a year from then. When a paid plan ends, you move back to Starter.'],

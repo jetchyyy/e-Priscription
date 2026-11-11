@@ -222,10 +222,12 @@ export default function PrescriptionView() {
                 <Lock className="h-7 w-7" aria-hidden="true" />
               </span>
               <h2 className="mt-3 text-xl font-semibold text-ink-900">
-                {returning ? 'Confirming your payment' : rx.payment_proof?.status === 'pending' ? 'Waiting for your doctor' : 'Prescription locked'}
+                {returning ? 'Confirming your payment' : rx.payment_proof?.status === 'pending' ? 'Waiting for your doctor' : rx.kind === 'lab' ? 'Lab request locked' : 'Prescription locked'}
               </h2>
               <p className="mt-1 text-sm text-ink-500">
-                {rx.medicine_count} medicine{rx.medicine_count === 1 ? '' : 's'} for <span className="font-medium text-ink-700">{rx.patient_hint}</span>
+                {rx.kind === 'lab'
+                  ? `${rx.lab_test_count} lab test${rx.lab_test_count === 1 ? '' : 's'}`
+                  : `${rx.medicine_count} medicine${rx.medicine_count === 1 ? '' : 's'}`} for <span className="font-medium text-ink-700">{rx.patient_hint}</span>
               </p>
               {returning && (
                 <p role="status" aria-live="polite" className="mt-2 text-sm text-ink-600">

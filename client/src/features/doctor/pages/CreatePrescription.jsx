@@ -3,17 +3,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, ExternalLink, KeyRound, Plus, RefreshCw, Eye } from 'lucide-react';
+import { Copy, ExternalLink, KeyRound, Plus, RefreshCw, Eye, Pill, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, Textarea } from '../../../components/ui/Input';
 import { MedicineFields } from '../components/MedicineFields';
+import { LabTestFields } from '../components/LabTestFields';
 import { PlanUsageNotice, myPlanQuery, usageLevel } from '../components/PlanUsage';
 import { isLimitError } from '../../billing/api';
 import { CopyLinkButton, ShareLinkButton } from '../components/CopyLinkButton';
 import { createPrescription } from '../api';
-import { emptyMedicine, prescriptionSchema } from '../schemas';
+import { emptyLabTest, emptyMedicine, labRequestSchema, prescriptionSchema } from '../schemas';
 import { useAuthStore } from '../../../store/authStore';
 import { env } from '../../../config/env';
 import { doctorTitle, formatPeso, rxLink } from '../../../lib/utils';
@@ -22,10 +23,21 @@ import { Modal } from '../../../components/ui/Modal';
 
 const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
 
-const defaults = () => ({
+const defaults = (kind = 'rx') => ({
+  kind,
   patientName: '', patientSex: '', patientDob: '', patientContact: '', patientAddress: '',
-  diagnosis: '', notes: '', amount: env.defaultFee, pin: generatePin(), medicines: [{ ...emptyMedicine }],
+  diagnosis: '', notes: '', amount: env.defaultFee, pin: generatePin(),
+  medicines: [{ ...emptyMedicine }], labTests: [{ ...emptyLabTest }],
 });
+
+// Validate against the schema of the document being written (prescription or lab request).
+const resolver = (values, ctx, opts) =>
+  zodResolver(values.kind === 'lab' ? labRequestSchema : prescriptionSchema)(values, ctx, opts);
+
+const KINDS = [
+  { id: 'rx', label: 'Prescription', icon: Pill },
+  { id: 'lab', label: 'Lab request', icon: FlaskConical },
+];
 
 function Section({ title, children, tourId }) {
   return (
@@ -45,11 +57,15 @@ export default function CreatePrescription() {
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
   const {
-    register, control, handleSubmit, watch, reset, setValue,
+    register, control, handleSubmit, watch, reset, setValue, clearErrors,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(prescriptionSchema), defaultValues: defaults() });
+  } = useForm({ resolver, defaultValues: defaults() });
 
   const formValues = watch();
+  const isLab = formValues.kind === 'lab';
+  const docName = isLab ? 'lab request' : 'prescription';
+  const DocName = isLab ? 'Lab request' : 'Prescription';
+  const switchKind = (kind) => { setValue('kind', kind); clearErrors(); };
   const { data: plan } = useQuery(myPlanQuery);
   const atLimit = usageLevel(plan) === 'out';
 
@@ -58,18 +74,19 @@ export default function CreatePrescription() {
     onSuccess: (id, values) => {
       qc.invalidateQueries({ queryKey: ['doctor', 'prescriptions'] });
       qc.invalidateQueries({ queryKey: myPlanQuery.queryKey });
-      setCreated({ id, patient: values.patientName, amount: values.amount, pin: values.pin });
+      setCreated({ id, kind: values.kind, patient: values.patientName, amount: values.amount, pin: values.pin });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     onError: (e) => {
       if (isLimitError(e)) qc.invalidateQueries({ queryKey: myPlanQuery.queryKey });
-      toast.error(e?.message || 'Could not create the prescription. Please try again.');
+      toast.error(e?.message || `Could not create the ${docName}. Please try again.`);
     },
   });
 
   // Allowed Ody moment (section 11.5: "prescription sent" with Ody celebrate at 140px)
   if (created) {
     const link = rxLink(created.id);
+    const createdName = created.kind === 'lab' ? 'lab request' : 'prescription';
     return (
       <div className="mx-auto max-w-xl py-6">
         <div className="rounded-[20px] border border-[#dce1e8] bg-white p-8 text-center sm:p-10 space-y-6">
@@ -77,7 +94,7 @@ export default function CreatePrescription() {
             <Ody mood="celebrate" alt="Ody mascot celebrating" className="w-[140px]" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-bold text-[#152839]">Prescription created</h1>
+            <h1 className="font-display text-2xl font-bold text-[#152839]">{created.kind === 'lab' ? 'Lab request' : 'Prescription'} created</h1>
             <p className="mt-2 text-sm text-[#45546a]">
               Send the link to your patient. It opens once they pay.
             </p>
@@ -108,12 +125,12 @@ export default function CreatePrescription() {
               <span className="font-mono text-2xl font-bold tracking-widest text-[#152839]">{created.pin}</span>
             </div>
             <p className="text-xs text-[#5f6a7c]">
-              Tell your patient this PIN in person. They will enter it after paying to view their prescription.
+              Tell your patient this PIN in person. They will enter it after paying to view their {createdName}.
             </p>
           </div>
 
           <div className="pt-4 border-t border-[#dce1e8] flex flex-wrap items-center justify-center gap-4">
-            <Button variant="secondary" onClick={() => { reset(defaults()); setCreated(null); }}>
+            <Button variant="secondary" onClick={() => { reset(defaults(created.kind)); setCreated(null); }}>
               <Plus className="h-4 w-4" aria-hidden="true" /> Write another
             </Button>
             <Link to="/doctor" className="text-sm font-semibold text-[#152839] hover:underline">
@@ -134,10 +151,11 @@ export default function CreatePrescription() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-[32px] font-bold text-[#152839]">New prescription</h1>
+          <h1 className="font-display text-[32px] font-bold text-[#152839]">New {docName}</h1>
           <p className="mt-1 text-sm text-[#45546a]">
-            Fill in patient and medicine details. Prescriptions cannot be edited after they are created.
+            Fill in patient and {isLab ? 'test' : 'medicine'} details. {DocName}s cannot be edited after they are created.
           </p>
+          <p className="mt-1 text-xs text-[#5f6a7c]">Each prescription or lab request uses one from your monthly limit.</p>
         </div>
         <button
           type="button"
@@ -149,6 +167,26 @@ export default function CreatePrescription() {
       </div>
 
       <PlanUsageNotice />
+
+      <div role="radiogroup" aria-label="Document type" data-tour="rx-kind" className="inline-flex rounded-full border border-[#dce1e8] bg-white p-1">
+        {KINDS.map(({ id, label, icon: Icon }) => {
+          const on = (formValues.kind ?? 'rx') === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => switchKind(id)}
+              className={on
+                ? 'inline-flex items-center gap-2 rounded-full bg-[#152839] px-4 py-2 text-sm font-semibold text-white'
+                : 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-[#152839] hover:bg-[#f9f8f3]'}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" /> {label}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 items-start">
         {/* Form in columns 1 to 7 on desktop */}
@@ -217,10 +255,10 @@ export default function CreatePrescription() {
           </Section>
 
           {/* Section 2: Diagnosis and notes */}
-          <Section title="Diagnosis and notes">
+          <Section title={isLab ? 'Clinical impression and notes' : 'Diagnosis and notes'}>
             <div className="grid gap-4">
               <Input
-                label="Diagnosis"
+                label={isLab ? 'Clinical impression / reason for request' : 'Diagnosis'}
                 placeholder="e.g. Acute tonsillitis"
                 error={errors.diagnosis?.message}
                 {...register('diagnosis')}
@@ -235,12 +273,18 @@ export default function CreatePrescription() {
           </Section>
 
           {/* Section 3: Medicines (data-tour="rx-medicines") */}
-          <Section title="Medicines" tourId="rx-medicines">
-            <p className="text-xs text-[#5f6a7c] -mt-2 mb-3">
-              Write the generic name first under Republic Act 6675 (Generics Act).
-            </p>
-            <MedicineFields control={control} register={register} errors={errors} watch={watch} />
-          </Section>
+          {isLab ? (
+            <Section title="Laboratory tests" tourId="rx-medicines">
+              <LabTestFields control={control} register={register} errors={errors} watch={watch} />
+            </Section>
+          ) : (
+            <Section title="Medicines" tourId="rx-medicines">
+              <p className="text-xs text-[#5f6a7c] -mt-2 mb-3">
+                Write the generic name first under Republic Act 6675 (Generics Act).
+              </p>
+              <MedicineFields control={control} register={register} errors={errors} watch={watch} />
+            </Section>
+          )}
 
           {/* Section 4: Access fee & security PIN (data-tour="rx-fee") */}
           <Section title="Access fee and security PIN" tourId="rx-fee">
@@ -284,7 +328,7 @@ export default function CreatePrescription() {
                   <p className="mt-1.5 text-xs text-[#a3330a]">{errors.pin.message}</p>
                 ) : (
                   <p className="mt-1.5 text-xs text-[#5f6a7c]">
-                    Tell your patient this PIN so they can open their prescription after payment.
+                    Tell your patient this PIN so they can open their {docName} after payment.
                   </p>
                 )}
               </div>
@@ -301,12 +345,12 @@ export default function CreatePrescription() {
               loading={mutation.isPending}
               disabled={atLimit}
             >
-              Create prescription
+              Create {docName}
             </Button>
             <p className="text-xs text-[#5f6a7c]">
               {atLimit
                 ? <>This month’s limit is reached. <Link to="/doctor/plan#packs" className="font-semibold text-[#b8470a] underline">Buy prescriptions</Link> or <Link to="/doctor/plan" className="font-semibold text-[#b8470a] underline">upgrade your plan</Link> to create it.</>
-                : 'Prescriptions cannot be edited after they are created.'}
+                : `${DocName}s cannot be edited after they are created.`}
             </p>
           </div>
         </form>
@@ -315,7 +359,7 @@ export default function CreatePrescription() {
         <div className="hidden xl:block xl:col-span-5 sticky top-24">
           <div className="rounded-[20px] border border-[#dce1e8] bg-white p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-[#dce1e8]">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#5f6a7c]">Live prescription preview</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#5f6a7c]">Live {docName} preview</span>
               <span className="h-2 w-1.5 rounded-[47%/35.6%] bg-[#ff6f07]" />
             </div>
             <RxSlip
@@ -328,6 +372,7 @@ export default function CreatePrescription() {
               patientName={formValues.patientName}
               patientAge={patientAge}
               medicines={formValues.medicines}
+              labTests={isLab ? formValues.labTests : undefined}
               diagnosis={formValues.diagnosis}
             />
           </div>
@@ -338,7 +383,7 @@ export default function CreatePrescription() {
       <Modal
         open={mobilePreviewOpen}
         onClose={() => setMobilePreviewOpen(false)}
-        title="Prescription preview"
+        title={`${DocName} preview`}
         size="md"
       >
         <RxSlip
@@ -351,6 +396,7 @@ export default function CreatePrescription() {
           patientName={formValues.patientName}
           patientAge={patientAge}
           medicines={formValues.medicines}
+          labTests={isLab ? formValues.labTests : undefined}
           diagnosis={formValues.diagnosis}
         />
       </Modal>

@@ -63,7 +63,7 @@ export const medicineSchema = z.object({
   instructions: optional(300),
 });
 
-export const prescriptionSchema = z.object({
+const documentBase = z.object({
   patientName: text('Patient name', 2, 120),
   patientSex: z.enum(['', 'Male', 'Female']).optional(),
   patientDob: z
@@ -82,8 +82,31 @@ export const prescriptionSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{4,6}$/, 'PIN must be 4 to 6 digits'),
+});
+
+export const prescriptionSchema = documentBase.extend({
+  kind: z.literal('rx').default('rx'),
   medicines: z.array(medicineSchema).min(1, 'Add at least one medicine').max(15, 'Maximum of 15 medicines'),
 });
+
+export const labTestSchema = z.object({
+  name: text('Test name', 2, 120),
+  notes: optional(200),
+});
+
+export const labRequestSchema = documentBase.extend({
+  kind: z.literal('lab'),
+  labTests: z.array(labTestSchema).min(1, 'Add at least one test').max(30, 'Maximum of 30 tests'),
+});
+
+export const emptyLabTest = { name: '', notes: '' };
+
+/** Common tests offered as one-tap chips on the lab request pad. */
+export const COMMON_LAB_TESTS = [
+  'Complete Blood Count (CBC)', 'Urinalysis', 'Fecalysis', 'Fasting Blood Sugar (FBS)', 'HbA1c',
+  'Lipid Profile', 'Creatinine', 'Blood Uric Acid (BUA)', 'SGPT / ALT', 'SGOT / AST',
+  'Sodium / Potassium', 'TSH', 'Chest X-ray (PA view)', '12-lead ECG', 'Dengue NS1',
+];
 
 export const emptyMedicine = {
   genericName: '', brandName: '', strength: '', form: 'Tablet', quantity: '',

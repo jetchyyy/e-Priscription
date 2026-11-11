@@ -135,7 +135,13 @@ export async function createPrescription(values) {
       notes: clean(values.notes),
       amount: values.amount,
       pin: clean(values.pin),
-      medicines: values.medicines.map((m) => ({
+      ...(values.kind === 'lab'
+        ? {
+          kind: 'lab',
+          medicines: [],
+          lab_tests: values.labTests.map((t) => ({ name: t.name.trim(), notes: t.notes?.trim() ?? '' })),
+        }
+        : { kind: 'rx', medicines: values.medicines.map((m) => ({
         genericName: m.genericName.trim(),
         brandName: m.brandName?.trim() ?? '',
         strength: m.strength.trim(),
@@ -145,7 +151,7 @@ export async function createPrescription(values) {
         frequency: m.frequency.trim(),
         duration: m.duration.trim(),
         instructions: m.instructions?.trim() ?? '',
-      })),
+      })) }),
     })
     .select('id')
     .single();
@@ -156,7 +162,7 @@ export async function createPrescription(values) {
 export async function fetchMyPrescriptions() {
   const { data, error } = await db()
     .from('prescriptions')
-    .select('id, patient_name, diagnosis, amount, pin, payment_status, created_at, paid_at')
+    .select('id, kind, patient_name, diagnosis, amount, pin, payment_status, created_at, paid_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;

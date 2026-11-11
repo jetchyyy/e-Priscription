@@ -4,6 +4,7 @@ import { PrescriptionContent } from './PrescriptionContent';
 function toPlaceholder(rx) {
   return {
     id: rx.id,
+    kind: rx.kind,
     created_at: rx.created_at,
     diagnosis: 'Hidden until payment',
     notes: null,
@@ -19,6 +20,10 @@ function toPlaceholder(rx) {
       s2_no: rx.doctor?.s2_no,
     },
     patient: { name: rx.patient_hint || 'P*** N***', sex: 'Male', address: 'Hidden address, City', contact: '0900 000 0000' },
+    lab_tests: Array.from({ length: Math.min(Math.max(rx.lab_test_count ?? 1, 1), 6) }, () => ({
+      name: 'Laboratory test name',
+      notes: 'Preparation notes',
+    })),
     medicines: Array.from({ length: Math.min(Math.max(rx.medicine_count ?? 1, 1), 6) }, () => ({
       genericName: 'Medicine name here',
       brandName: 'Brand',

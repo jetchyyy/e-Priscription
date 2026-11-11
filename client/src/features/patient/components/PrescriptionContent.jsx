@@ -28,6 +28,7 @@ function PatientLine({ label, children, className }) {
  * signature with PRC / PTR / S2 numbers.
  */
 export function PrescriptionContent({ rx, className, animate = false }) {
+  const isLab = rx.kind === 'lab';
   const doctor = rx.doctor ?? {};
   const patient = rx.patient ?? {};
   const age = computeAge(patient.dob);
@@ -35,7 +36,7 @@ export function PrescriptionContent({ rx, className, animate = false }) {
   return (
     <article
       id="rx-print"
-      aria-label="Prescription"
+      aria-label={isLab ? 'Laboratory request' : 'Prescription'}
       className={cn(
         'rx-paper relative overflow-hidden rounded-2xl text-[15px] text-ink-800 shadow-paper ring-1 ring-ink-200',
         animate && 'animate-unlock',
@@ -71,11 +72,28 @@ export function PrescriptionContent({ rx, className, animate = false }) {
           <PatientLine label="Sex" className="sm:col-span-2">{patient.sex}</PatientLine>
           <PatientLine label="Contact" className="sm:col-span-2">{patient.contact}</PatientLine>
           <PatientLine label="Address" className="sm:col-span-6">{patient.address}</PatientLine>
-          {rx.diagnosis && <PatientLine label="Diagnosis" className="sm:col-span-6">{rx.diagnosis}</PatientLine>}
+          {rx.diagnosis && (
+            <PatientLine label={isLab ? 'Clinical impression' : 'Diagnosis'} className="sm:col-span-6">{rx.diagnosis}</PatientLine>
+          )}
         </dl>
       </section>
 
       <section className="px-5 pb-2 pt-3 sm:px-10">
+        {isLab ? (
+          <>
+            <h3 className="font-rx text-2xl font-bold uppercase tracking-[.12em] text-brand-600 sm:text-3xl">Laboratory Request</h3>
+            <p className="mt-1 text-sm text-ink-600">Please perform the following:</p>
+            <ol className="mt-3 space-y-3">
+              {(rx.lab_tests ?? []).map((t, i) => (
+                <li key={i} className="pl-1">
+                  <p className="break-words font-semibold text-ink-900">{i + 1}. {t.name}</p>
+                  {t.notes && <p className="mt-0.5 pl-5 text-ink-700">{t.notes}</p>}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+        <>
         <div className="font-rx text-6xl font-bold leading-none text-brand-600 sm:text-7xl" aria-label="Rx">℞</div>
 
         <ol className="mt-2 space-y-5">
@@ -97,6 +115,8 @@ export function PrescriptionContent({ rx, className, animate = false }) {
             </li>
           ))}
         </ol>
+        </>
+        )}
 
         {rx.notes && (
           <div className="mt-6 rounded-xl border border-dashed border-ink-300 bg-white/60 px-4 py-3 text-sm">
@@ -120,7 +140,7 @@ export function PrescriptionContent({ rx, className, animate = false }) {
 
         <div className="mt-6 border-t border-ink-200 pt-3 text-[11px] leading-relaxed text-ink-500">
           <p>
-            Generic prescribing per RA 6675 (Generics Act of 1988), as amended by RA 9502. Electronically issued via
+            {!isLab && 'Generic prescribing per RA 6675 (Generics Act of 1988), as amended by RA 9502. '}Electronically issued via
             E-Reseta · Ref: <span className="font-mono">{rx.id}</span>
           </p>
           <p>Contains personal and sensitive personal information protected under RA 10173 (Data Privacy Act of 2012).</p>

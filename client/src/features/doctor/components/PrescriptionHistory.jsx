@@ -29,6 +29,14 @@ function Actions({ id }) {
 }
 
 /** Prescription history with search, status filter, real table, and mobile card view. */
+function LabBadge() {
+  return (
+    <span className="ml-2 inline-flex items-center rounded-full bg-[#eef3fb] px-2 py-0.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-[#1f4f8a]">
+      Lab
+    </span>
+  );
+}
+
 export function PrescriptionHistory({ items = [], loading }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'paid' | 'waiting'
@@ -130,7 +138,7 @@ export function PrescriptionHistory({ items = [], loading }) {
                   <tr key={rx.id} className="hover:bg-[#f9f8f3]/60 transition">
                     <td className="px-6 py-4 text-[#5f6a7c] whitespace-nowrap">{formatShortDate(rx.created_at)}</td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-[#152839]">{rx.patient_name}</p>
+                      <p className="font-semibold text-[#152839]">{rx.patient_name}{rx.kind === 'lab' && <LabBadge />}</p>
                       {rx.diagnosis && <p className="text-xs text-[#5f6a7c] truncate max-w-xs">{rx.diagnosis}</p>}
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-[#5f6a7c]">
@@ -156,7 +164,7 @@ export function PrescriptionHistory({ items = [], loading }) {
                 <div className="rounded-[20px] border border-[#dce1e8] bg-white p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-[#152839]">{rx.patient_name}</p>
+                      <p className="font-semibold text-[#152839]">{rx.patient_name}{rx.kind === 'lab' && <LabBadge />}</p>
                       <p className="text-xs text-[#5f6a7c]">
                         {formatShortDate(rx.created_at)} · {formatPeso(rx.amount)}
                       </p>
