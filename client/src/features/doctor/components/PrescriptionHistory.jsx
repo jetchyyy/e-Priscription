@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, FilePlus2, FlaskConical, Search } from 'lucide-react';
 import { Card } from '../../../components/ui/Card';
 import { PaymentBadge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -19,16 +19,15 @@ function Actions({ id }) {
         href={link}
         target="_blank"
         rel="noreferrer"
-        aria-label="Open patient view in a new tab"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#45546a] hover:bg-[#ece7de] transition"
+        className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-[#dce1e8] bg-white px-4 text-sm font-semibold text-[#152839] hover:bg-[#ece7de] transition"
       >
-        <ExternalLink className="h-4 w-4" />
+        <ExternalLink className="h-4 w-4" aria-hidden="true" /> View
+        <span className="sr-only">(opens in a new tab)</span>
       </a>
     </div>
   );
 }
 
-/** Prescription history with search, status filter, real table, and mobile card view. */
 function LabBadge() {
   return (
     <span className="ml-2 inline-flex items-center rounded-full bg-[#eef3fb] px-2 py-0.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-[#1f4f8a]">
@@ -37,9 +36,36 @@ function LabBadge() {
   );
 }
 
+const STATUS_FILTERS = [['all', 'All'], ['paid', 'Paid'], ['waiting', 'Waiting']];
+const TYPE_FILTERS = [['all', 'All'], ['rx', 'Prescriptions'], ['lab', 'Lab requests']];
+
+function FilterPills({ label, options, value, onChange }) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap items-center gap-1.5 rounded-[22px] border border-[#dce1e8] bg-white p-1">
+      {options.map(([mode, text]) => (
+        <button
+          key={mode}
+          type="button"
+          aria-pressed={value === mode}
+          onClick={() => onChange(mode)}
+          className={`min-h-[36px] rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+            value === mode
+              ? 'bg-[#152839] text-[#f9f8f3]'
+              : 'text-[#45546a] hover:bg-[#ece7de]'
+          }`}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Prescriptions and lab requests with search, type and status filters, a table, and a mobile card view. */
 export function PrescriptionHistory({ items = [], loading }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'paid' | 'waiting'
+  const [type, setType] = useState('all'); // 'all' | 'rx' | 'lab'
 
   const filtered = useMemo(() => {
     return items.filter((rx) => {
@@ -48,9 +74,11 @@ export function PrescriptionHistory({ items = [], loading }) {
         filter === 'all' ||
         (filter === 'paid' && rx.payment_status === 'paid') ||
         (filter === 'waiting' && rx.payment_status !== 'paid');
-      return matchSearch && matchStatus;
+      const isLab = rx.kind === 'lab';
+      const matchType = type === 'all' || (type === 'lab' ? isLab : !isLab);
+      return matchSearch && matchStatus && matchType;
     });
-  }, [items, search, filter]);
+  }, [items, search, filter, type]);
 
   if (loading) {
     return (
@@ -67,14 +95,21 @@ export function PrescriptionHistory({ items = [], loading }) {
       <div className="flex flex-col items-center justify-center rounded-[20px] border border-[#dce1e8] bg-white p-12 text-center">
         <Ody mood="happy" alt="Ody mascot" className="w-28 mb-4" />
         <h3 className="font-display text-lg font-semibold text-[#152839]">
-          Nothing here yet. Write your first prescription.
+          Nothing here yet.
         </h3>
         <p className="mt-1.5 max-w-sm text-sm text-[#45546a]">
-          Prescriptions you issue will appear here with their payment status and shareable link.
+          Your prescriptions and lab requests will show here. You will see if the patient has paid, and you can send the link again.
         </p>
-        <div className="mt-5">
+        <div className="mt-5 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Link to="/doctor/new">
-            <Button variant="accent">New prescription</Button>
+            <Button variant="accent" className="w-full">
+              <FilePlus2 className="h-4 w-4" aria-hidden="true" /> New prescription
+            </Button>
+          </Link>
+          <Link to="/doctor/lab-request">
+            <Button variant="secondary" className="w-full">
+              <FlaskConical className="h-4 w-4" aria-hidden="true" /> New lab request
+            </Button>
           </Link>
         </div>
       </div>
@@ -84,8 +119,8 @@ export function PrescriptionHistory({ items = [], loading }) {
   return (
     <div className="space-y-4">
       {/* Search and status filter bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-80">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full lg:w-72">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f6a7c]" />
           <input
             type="search"
@@ -95,39 +130,27 @@ export function PrescriptionHistory({ items = [], loading }) {
             className="w-full rounded-[18px] border border-[#dce1e8] bg-white pl-10 pr-4 py-2 text-sm text-[#152839] placeholder:text-[#5f6a7c] focus:outline-none focus:border-[#ff6f07] focus:ring-2 focus:ring-[#ff6f07]/20"
           />
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-[#dce1e8] bg-white p-1">
-          {['all', 'paid', 'waiting'].map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setFilter(mode)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition ${
-                filter === mode
-                  ? 'bg-[#152839] text-[#f9f8f3]'
-                  : 'text-[#45546a] hover:bg-[#ece7de]'
-              }`}
-            >
-              {mode === 'all' ? 'All' : mode === 'paid' ? 'Paid' : 'Waiting'}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterPills label="Type" options={TYPE_FILTERS} value={type} onChange={setType} />
+          <FilterPills label="Payment status" options={STATUS_FILTERS} value={filter} onChange={setFilter} />
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="rounded-[20px] border border-[#dce1e8] bg-white p-8 text-center text-sm text-[#5f6a7c]">
-          No prescriptions found matching your search.
+          Nothing matches your search.
         </div>
       ) : (
         <>
           {/* Desktop Table (section 11.4) */}
           <div className="hidden overflow-hidden rounded-[20px] border border-[#dce1e8] bg-white md:block">
             <table className="w-full text-left text-sm">
-              <caption className="sr-only">Prescription history</caption>
+              <caption className="sr-only">Prescriptions and lab requests</caption>
               <thead className="bg-[#f9f8f3] text-xs font-semibold uppercase tracking-wider text-[#5f6a7c] border-b border-[#dce1e8]">
                 <tr>
                   <th scope="col" className="px-6 py-3.5">Date</th>
                   <th scope="col" className="px-6 py-3.5">Patient</th>
-                  <th scope="col" className="px-6 py-3.5">Rx No.</th>
+                  <th scope="col" className="px-6 py-3.5">Ref. No.</th>
                   <th scope="col" className="px-6 py-3.5">Fee</th>
                   <th scope="col" className="px-6 py-3.5">Status</th>
                   <th scope="col" className="px-6 py-3.5 text-right"><span className="sr-only">Actions</span></th>

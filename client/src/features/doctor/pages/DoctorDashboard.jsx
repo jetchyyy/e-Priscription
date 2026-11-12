@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FilePlus2 } from 'lucide-react';
+import { FilePlus2, FlaskConical } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PrescriptionHistory } from '../components/PrescriptionHistory';
 import { PaymentsToConfirm } from '../components/PaymentsToConfirm';
@@ -55,16 +55,37 @@ export default function DoctorDashboard() {
             ].filter(Boolean).join(' · ')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link to="/doctor/profile">
-            <Button variant="secondary">Doctor details</Button>
-          </Link>
-          <Link to="/doctor/new">
-            <Button variant="accent">
-              <FilePlus2 className="h-4 w-4" aria-hidden="true" /> New prescription
-            </Button>
-          </Link>
-        </div>
+        <Link to="/doctor/profile">
+          <Button variant="secondary">My details</Button>
+        </Link>
+      </div>
+
+      {/* The two main jobs, big and first */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          to="/doctor/new"
+          className="flex min-h-[72px] items-center gap-4 rounded-[20px] bg-[#ff6f07] px-6 py-4 text-[#152839] transition hover:bg-[#ff8a33] active:scale-[.99]"
+        >
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/70">
+            <FilePlus2 className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <span>
+            <span className="block font-display text-lg font-bold">New prescription</span>
+            <span className="block text-sm">Write medicines for a patient</span>
+          </span>
+        </Link>
+        <Link
+          to="/doctor/lab-request"
+          className="flex min-h-[72px] items-center gap-4 rounded-[20px] border border-[#dce1e8] bg-white px-6 py-4 text-[#152839] transition hover:bg-[#f9f8f3] active:scale-[.99]"
+        >
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ece7de]">
+            <FlaskConical className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <span>
+            <span className="block font-display text-lg font-bold">New lab request</span>
+            <span className="block text-sm text-[#45546a]">Ask for laboratory tests</span>
+          </span>
+        </Link>
       </div>
 
       <ClinicNotices />
@@ -84,14 +105,14 @@ export default function DoctorDashboard() {
         </div>
       </div>
 
-      {/* Prescription history */}
+      {/* History */}
       <PaymentsToConfirm />
 
       <section aria-labelledby="history-h">
-        <h2 id="history-h" className="mb-4 font-display text-xl font-semibold text-[#152839]">Prescription history</h2>
+        <h2 id="history-h" className="mb-4 font-display text-xl font-semibold text-[#152839]">Prescriptions and lab requests</h2>
         {isError ? (
           <div role="alert" className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-5 text-sm text-[#7a2406]">
-            We couldn’t load your prescriptions. <button className="font-semibold underline ml-1" onClick={() => refetch()}>Try again</button>
+            We couldn’t load your prescriptions and lab requests. <button className="font-semibold underline ml-1" onClick={() => refetch()}>Try again</button>
           </div>
         ) : (
           <PrescriptionHistory items={items} loading={isLoading} />

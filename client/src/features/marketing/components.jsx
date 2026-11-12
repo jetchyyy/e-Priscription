@@ -457,7 +457,7 @@ export function RxSlip({
               {t.notes && <span>{t.notes}</span>}
             </div>
           )) : (
-            <div className="rx__med"><span>Pick tests on the left to see them here.</span></div>
+            <div className="rx__med"><span>Pick tests to see them here.</span></div>
           )
         ) : medicines && medicines.length > 0 && medicines[0]?.genericName ? (
           medicines.map((m, idx) => (

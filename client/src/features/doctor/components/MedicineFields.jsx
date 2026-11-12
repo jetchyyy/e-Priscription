@@ -2,11 +2,37 @@ import { useFieldArray } from 'react-hook-form';
 import { Pill, Plus, Trash2 } from 'lucide-react';
 import { Input, Select, Textarea } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
-import { DOSAGE_FORMS, FREQUENCY_SUGGESTIONS, emptyMedicine } from '../schemas';
+import { DOSAGE_FORMS, DURATION_CHIPS, FREQUENCY_CHIPS, FREQUENCY_SUGGESTIONS, emptyMedicine } from '../schemas';
 import { buildSig } from '../../../lib/utils';
 
+/** One-tap values for a text field. Tapping sets the field; typing still works. */
+function QuickChips({ label, options, value, onPick }) {
+  const current = (value ?? '').trim().toLowerCase();
+  return (
+    <div role="group" aria-label={label} className="mt-2 flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const on = current === opt.toLowerCase();
+        return (
+          <button
+            key={opt}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onPick(opt)}
+            className={on
+              ? 'min-h-[36px] rounded-full border border-[#ff6f07] bg-[#fff3ea] px-3 py-1.5 text-sm font-semibold text-[#b8470a]'
+              : 'min-h-[36px] rounded-full border border-[#dce1e8] bg-white px-3 py-1.5 text-sm text-[#152839] hover:bg-[#f9f8f3]'}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Repeatable medicine rows (Generic name, Brand, Strength, Form, Disp, Sig parts). */
-export function MedicineFields({ control, register, errors, watch }) {
+export function MedicineFields({ control, register, errors, watch, setValue }) {
+  const pick = (name, value) => setValue?.(name, value, { shouldValidate: true, shouldDirty: true });
   const { fields, append, remove } = useFieldArray({ control, name: 'medicines' });
   const rowErr = (i, k) => errors?.medicines?.[i]?.[k]?.message;
 
@@ -52,10 +78,18 @@ export function MedicineFields({ control, register, errors, watch }) {
                 inputMode="numeric" error={rowErr(i, 'quantity')} {...register(`medicines.${i}.quantity`)} />
               <Input wrapperClassName="lg:col-span-2" label="Dose per intake" required placeholder="e.g. 1 capsule"
                 error={rowErr(i, 'dose')} {...register(`medicines.${i}.dose`)} />
-              <Input wrapperClassName="lg:col-span-2" label="Frequency" required list="frequency-options" placeholder="e.g. three times a day"
-                error={rowErr(i, 'frequency')} {...register(`medicines.${i}.frequency`)} />
-              <Input wrapperClassName="lg:col-span-2" label="Duration" required placeholder="e.g. 7 days"
-                error={rowErr(i, 'duration')} {...register(`medicines.${i}.duration`)} />
+              <div className="sm:col-span-2 lg:col-span-4">
+                <Input label="Frequency" required list="frequency-options" placeholder="e.g. three times a day"
+                  error={rowErr(i, 'frequency')} {...register(`medicines.${i}.frequency`)} />
+                <QuickChips label={`Frequency for medicine ${i + 1}`} options={FREQUENCY_CHIPS}
+                  value={watch(`medicines.${i}.frequency`)} onPick={(v) => pick(`medicines.${i}.frequency`, v)} />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-6">
+                <Input label="Duration" required placeholder="e.g. 7 days"
+                  error={rowErr(i, 'duration')} {...register(`medicines.${i}.duration`)} />
+                <QuickChips label={`Duration for medicine ${i + 1}`} options={DURATION_CHIPS}
+                  value={watch(`medicines.${i}.duration`)} onPick={(v) => pick(`medicines.${i}.duration`, v)} />
+              </div>
               <Textarea wrapperClassName="sm:col-span-2 lg:col-span-6" rows={2} label="Special instructions (optional)"
                 placeholder="e.g. Take after meals. Complete the full course."
                 error={rowErr(i, 'instructions')} {...register(`medicines.${i}.instructions`)} />

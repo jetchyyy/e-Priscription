@@ -131,7 +131,9 @@ export function TourProvider({ children }) {
     const maxAttempts = 30; // 3 seconds at 100ms
     const interval = setInterval(() => {
       attempts += 1;
-      const el = document.querySelector(`[data-tour="${step.tourTarget}"]`);
+      // A target can exist twice (desktop sidebar and phone bottom bar); prefer the one on screen.
+      const all = [...document.querySelectorAll(`[data-tour="${step.tourTarget}"]`)];
+      const el = all.find((n) => n.getClientRects().length > 0) ?? all[0];
       if (el) {
         clearInterval(interval);
         setTargetEl(el);
@@ -228,7 +230,7 @@ export function TourProvider({ children }) {
                 navigate('/doctor');
               }}
             >
-              Back to dashboard
+              Back to home
             </Button>
             <Button
               variant="accent"

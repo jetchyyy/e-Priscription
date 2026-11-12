@@ -8,7 +8,14 @@ function NavItems({ items, onNavigate, onOpenGuide }) {
   return (
     <div className="flex flex-col h-full justify-between">
       <nav aria-label="Main" className="flex flex-col gap-1.5">
-        {items.map(({ to, label, icon: Icon, end, tourId }) => (
+        {items.map(({ to, label, icon: Icon, end, tourId, heading }) => heading ? (
+          <p
+            key={`h-${heading}`}
+            className="mt-4 px-3.5 pb-0.5 text-xs font-semibold uppercase tracking-wider text-[#5f6a7c]"
+          >
+            {heading}
+          </p>
+        ) : (
           <NavLink
             key={to}
             to={to}

@@ -61,7 +61,8 @@ export const router = createBrowserRouter([
         element: <RequireRole role="doctor" approved><AppShell /></RequireRole>,
         children: [
           { path: '/doctor', element: <DoctorDashboard /> },
-          { path: '/doctor/new', element: <CreatePrescription /> },
+          { path: '/doctor/new', element: <CreatePrescription kind="rx" key="rx" /> },
+          { path: '/doctor/lab-request', element: <CreatePrescription kind="lab" key="lab" /> },
           { path: '/doctor/profile', element: <DoctorProfile /> },
           { path: '/doctor/qr-codes', element: <DoctorQrManagement /> },
           { path: '/doctor/plan', element: <DoctorPlan /> },

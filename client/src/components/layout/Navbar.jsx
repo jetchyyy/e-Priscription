@@ -29,14 +29,16 @@ export function Navbar({ onMenu, onOpenGuide }) {
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-[#dce1e8] bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Open navigation menu"
-          className="-ml-2 inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#152839] hover:bg-[#ece7de] lg:hidden"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
+        {onMenu && (
+          <button
+            type="button"
+            onClick={onMenu}
+            aria-label="Open navigation menu"
+            className="-ml-2 inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#152839] hover:bg-[#ece7de] lg:hidden"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        )}
         <Logo to={profile?.role === 'admin' ? '/admin' : '/doctor'} />
         <div className="ml-auto flex items-center gap-3">
           <div className="relative" ref={menuRef}>
@@ -45,9 +47,10 @@ export function Navbar({ onMenu, onOpenGuide }) {
               onClick={() => setUserMenuOpen((prev) => !prev)}
               aria-expanded={userMenuOpen}
               aria-label="User menu"
-              className="flex items-center gap-2 rounded-full border border-[#dce1e8] bg-white py-1.5 pl-3 pr-2 text-sm font-medium text-[#152839] transition hover:bg-[#ece7de]"
+              className="flex min-h-[44px] items-center gap-2 rounded-full border border-[#dce1e8] bg-white py-1.5 pl-1.5 pr-1.5 text-sm font-medium text-[#152839] transition hover:bg-[#ece7de] sm:pl-3 sm:pr-2"
             >
-              <span className="max-w-[12rem] truncate font-semibold">
+              {/* Name is hidden on phones so it does not squeeze the logo. The initial stays. */}
+              <span className="hidden max-w-[12rem] truncate font-semibold sm:inline">
                 {profile?.full_name || profile?.email}
               </span>
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ece7de] text-xs font-bold text-[#152839]">

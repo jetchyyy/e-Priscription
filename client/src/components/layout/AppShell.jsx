@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, FilePlus2, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark } from 'lucide-react';
+import { Home, FilePlus2, FlaskConical, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import { BottomNav } from './BottomNav';
 import { useAuthStore } from '../../store/authStore';
 
 import { TourProvider, useTour } from '../../features/onboarding/TourProvider';
 
 const doctorNav = [
-  { to: '/doctor', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/doctor/new', label: 'New prescription', icon: FilePlus2, tourId: 'nav-new' },
-  { to: '/doctor/profile', label: 'Doctor & Clinic Details', icon: Stethoscope, tourId: 'nav-profile' },
-  { to: '/doctor/qr-codes', label: 'Payment QR Codes', icon: QrCode, tourId: 'nav-qr' },
-  { to: '/doctor/earnings', label: 'Earnings and payouts', icon: Wallet },
-  { to: '/doctor/plan', label: 'Plan and usage', icon: Gauge },
+  { to: '/doctor', label: 'Home', icon: Home, end: true },
+  { to: '/doctor/new', label: 'New prescription', short: 'Prescription', icon: FilePlus2, tourId: 'nav-new' },
+  { to: '/doctor/lab-request', label: 'New lab request', short: 'Lab request', icon: FlaskConical, tourId: 'nav-lab' },
+  { heading: 'Account' },
+  { to: '/doctor/profile', label: 'My details', icon: Stethoscope, tourId: 'nav-profile' },
+  { to: '/doctor/qr-codes', label: 'Payment QR codes', icon: QrCode, tourId: 'nav-qr' },
+  { to: '/doctor/earnings', label: 'Earnings', icon: Wallet },
+  { to: '/doctor/plan', label: 'Plan', icon: Gauge },
   { to: '/doctor/clinic', label: 'Clinic', icon: Building2 },
 ];
+// Shown in the phone bottom bar; the rest live behind "More".
+const DOCTOR_BOTTOM = ['/doctor', '/doctor/new', '/doctor/lab-request'];
+
 const adminNav = [
   { to: '/admin', label: 'Doctor approvals', icon: ShieldCheck, end: true },
   { to: '/admin/billing', label: 'Plans and billing', icon: ReceiptText },
@@ -31,20 +37,33 @@ function AppShellInner() {
     tour.open();
   };
 
+  const isDoctor = role === 'doctor';
+
   return (
     <div className="ody ody-app min-h-screen bg-[#f9f8f3] text-[#152839]">
-      <Navbar onMenu={() => setDrawer(true)} onOpenGuide={handleOpenGuide} />
+      {/* Doctors open the full menu from "More" in the bottom bar, so the top menu button is not needed. */}
+      <Navbar onMenu={isDoctor ? undefined : () => setDrawer(true)} onOpenGuide={handleOpenGuide} />
       <div className="mx-auto flex max-w-7xl">
         <Sidebar
           items={role === 'admin' ? adminNav : doctorNav}
           open={drawer}
           onClose={() => setDrawer(false)}
-          onOpenGuide={role === 'doctor' ? handleOpenGuide : undefined}
+          onOpenGuide={isDoctor ? handleOpenGuide : undefined}
         />
-        <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main
+          id="main"
+          className={`min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 ${isDoctor ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6' : ''}`}
+        >
           <Outlet />
         </main>
       </div>
+      {isDoctor && (
+        <BottomNav
+          items={doctorNav.filter((item) => DOCTOR_BOTTOM.includes(item.to))}
+          onMore={() => setDrawer((open) => !open)}
+          moreOpen={drawer}
+        />
+      )}
     </div>
   );
 }

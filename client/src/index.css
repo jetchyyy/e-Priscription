@@ -7,12 +7,19 @@
 
 @layer base {
   html { -webkit-tap-highlight-color: transparent; }
+  /* Height of the phone bottom menu (BottomNav), so other fixed bottom items can sit above it. */
+  @media (max-width: 1023.98px) {
+    html.has-bottom-nav { --bottom-nav-h: calc(57px + env(safe-area-inset-bottom)); }
+  }
   body {
     background-color: var(--warm, #f9f8f3);
     color: var(--navy, #152839);
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* viewport-fit=cover: keep content clear of the notch in landscape. Zero in portrait and on desktop. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   /* No colour here: headings take the colour of their section, so they stay light on navy panels. */
   h1, h2, h3, h4 {

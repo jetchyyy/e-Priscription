@@ -123,3 +123,11 @@ export const FREQUENCY_SUGGESTIONS = [
   'every 4 hours', 'every 6 hours', 'every 8 hours', 'every 12 hours',
   'at bedtime', 'once a week', 'as needed (PRN)',
 ];
+
+/** One-tap chips under the Frequency field. Typing any other value still works. */
+export const FREQUENCY_CHIPS = [
+  'once a day', 'twice a day', 'three times a day', 'every 8 hours', 'at bedtime', 'as needed (PRN)',
+];
+
+/** One-tap chips under the Duration field. */
+export const DURATION_CHIPS = ['3 days', '5 days', '7 days', '14 days', '30 days'];

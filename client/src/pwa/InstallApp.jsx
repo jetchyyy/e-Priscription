@@ -109,7 +109,7 @@ function InstallBanner() {
   return (
     <div role="dialog" aria-label="Install the app"
       className="ody fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-md items-center gap-3 rounded-[20px] border border-[#dce1e8] bg-white p-3 pl-4 shadow-2xl"
-      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+      style={{ marginBottom: 'var(--bottom-nav-h, env(safe-area-inset-bottom))' }}>
       <img src="/icon-192.png" alt="" width="44" height="44" className="h-11 w-11 shrink-0 rounded-[12px]" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold text-[#152839]">Get the app</p>
