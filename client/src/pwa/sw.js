@@ -45,7 +45,8 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
       caches.match(request).then((hit) => hit || fetch(request).then((res) => {
-        if (res.ok) {
+        // A deleted chunk comes back as the SPA's index.html; never save that under a .js address.
+        if (res.ok && !(res.headers.get('content-type') || '').includes('text/html')) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(request, copy));
         }
