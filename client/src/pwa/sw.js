@@ -5,7 +5,7 @@
  * touched, so no prescription or patient data is ever stored here. */
 const CACHE = 'eprx-__BUILD_ID__';
 const SHELL = '/';
-const PRECACHE = [SHELL, '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.svg'];
+const PRECACHE = [SHELL, '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.svg', '/brand/ody-erx-thinking.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));

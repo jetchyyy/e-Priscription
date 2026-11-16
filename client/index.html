@@ -97,14 +97,109 @@
       }
     </script>
 
+    <!-- iOS launch screens (iOS ignores the manifest splash). Same layout as #splash below. -->
+    <link rel="apple-touch-startup-image" href="/splash/splash-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1640x2360.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1620x2160.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/splash/splash-1488x2266.png" media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&family=Poppins:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* Launch splash: plain HTML/CSS so it paints before the app's JavaScript arrives.
+         Colours match manifest background_color so Android's own splash hands over seamlessly. */
+      #splash {
+        position: fixed; inset: 0; z-index: 2147483000;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+        background: #f9f8f3; color: #152839; text-align: center;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        transition: opacity 0.22s ease-out, visibility 0s linear 0.22s;
+      }
+      #splash.splash-done { opacity: 0; visibility: hidden; pointer-events: none; }
+      #splash .sp-mark { width: 76px; height: 76px; animation: sp-breathe 2.4s ease-in-out infinite; }
+      #splash .sp-mark svg { display: block; width: 100%; height: 100%; }
+      #splash .sp-ody { display: none; width: 112px; height: auto; }
+      #splash .sp-title { margin: 18px 0 0; font: 600 19px/1.2 Poppins, Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.01em; }
+      #splash .sp-sub { margin: 6px 0 0; max-width: 260px; font-size: 13px; line-height: 1.45; color: #5f6a7c; }
+      #splash .sp-track { width: 104px; height: 4px; margin-top: 24px; border-radius: 4px; background: #ece7de; overflow: hidden; }
+      #splash .sp-bar { width: 40%; height: 100%; border-radius: 4px; background: #ff6f07; animation: sp-slide 1.3s ease-in-out infinite; }
+      #splash .sp-retry {
+        display: none; margin-top: 22px; padding: 10px 26px; border: 0; border-radius: 999px;
+        background: #ff6f07; color: #fff; font: 600 14px/1 Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer;
+      }
+      #splash .sp-retry:active { background: #e05f00; }
+      #splash .sp-foot { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); left: 0; right: 0; margin: 0; font-size: 11px; color: #8896ae; }
+      /* Slow load: Ody takes over from the monogram. */
+      #splash.sp-slow .sp-mark { display: none; }
+      #splash.sp-slow .sp-ody { display: block; }
+      /* Offline or stuck: stop the bar, offer a retry. */
+      #splash.sp-stuck .sp-mark { display: none; }
+      #splash.sp-stuck .sp-ody { display: block; }
+      #splash.sp-stuck .sp-track { display: none; }
+      #splash.sp-stuck .sp-retry { display: inline-block; }
+      @keyframes sp-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+      @keyframes sp-slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .sp-mark { animation: none; }
+        #splash .sp-bar { width: 100%; animation: sp-pulse 1.6s ease-in-out infinite alternate; }
+        @keyframes sp-pulse { from { opacity: 0.35; } to { opacity: 1; } }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-live="polite">
+      <div class="sp-mark" aria-hidden="true"><!--SPLASH_MONOGRAM--></div>
+      <img class="sp-ody" src="/brand/ody-erx-thinking.svg" alt="" width="112" height="92" />
+      <p class="sp-title" id="sp-title">E-Prescription</p>
+      <p class="sp-sub" id="sp-sub">by ODYSSEY</p>
+      <div class="sp-track" aria-hidden="true"><div class="sp-bar"></div></div>
+      <button type="button" class="sp-retry" onclick="location.reload()">Try again</button>
+      <p class="sp-foot">Prescriptions from PRC-licensed doctors</p>
+    </div>
+    <script>
+      // Splash states before React takes over. The app hides it with window.__hideSplash (src/pwa/splash.js).
+      (function () {
+        var el = document.getElementById('splash');
+        var title = document.getElementById('sp-title');
+        var sub = document.getElementById('sp-sub');
+        function set(state, t, s) {
+          if (!el || el.classList.contains('splash-done')) return;
+          el.classList.remove('sp-slow', 'sp-stuck');
+          if (state) el.classList.add(state);
+          title.textContent = t;
+          sub.textContent = s;
+        }
+        function offline() { set('sp-stuck', 'You’re offline', 'Check your mobile data or Wi-Fi, then try again.'); }
+        setTimeout(function () {
+          if (navigator.onLine === false) offline();
+          else set('sp-slow', 'Almost there…', 'Your connection seems slow. Still loading.');
+        }, 3000);
+        setTimeout(function () {
+          if (navigator.onLine === false) offline();
+          else set('sp-stuck', 'This is taking too long', 'Check your connection, then try again.');
+        }, 15000);
+        window.addEventListener('offline', function () { setTimeout(offline, 1500); });
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

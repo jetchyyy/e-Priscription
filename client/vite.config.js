@@ -14,7 +14,11 @@ const PUBLIC_PAGES = ['/', '/pricing', '/terms', '/privacy'];
 function siteUrlPlugin(siteUrl) {
   return {
     name: 'site-url',
-    transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl),
+    transformIndexHtml: (html) =>
+      html
+        .replaceAll('__SITE_URL__', siteUrl)
+        // Launch splash: inline the monogram so it paints with the HTML, before any network request.
+        .replace('<!--SPLASH_MONOGRAM-->', readFileSync(new URL('./public/favicon.svg', import.meta.url), 'utf8').trim()),
     generateBundle() {
       // Service worker: stamped with a build id so each deploy replaces the old worker and its caches.
       this.emitFile({
