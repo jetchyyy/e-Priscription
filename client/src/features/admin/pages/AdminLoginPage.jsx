@@ -6,6 +6,7 @@ import { AuthField, AuthShell } from '../../auth/components/AuthShell';
 import { loginSchema } from '../../auth/schemas';
 import { friendlyAuthError, signIn } from '../../auth/api';
 import { useAuthStore } from '../../../store/authStore';
+import { PageLoader } from '../../../components/ui/Spinner';
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -22,7 +23,8 @@ export default function AdminLoginPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  if (!loading && session && profile?.role === 'admin') {
+  if (loading) return <PageLoader label="Checking your session" />;
+  if (session && profile?.role === 'admin') {
     return <Navigate to="/admin" replace />;
   }
 

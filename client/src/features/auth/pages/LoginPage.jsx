@@ -2,10 +2,14 @@ import { Link, Navigate } from 'react-router-dom';
 import { AuthShell } from '../components/AuthShell';
 import { LoginForm } from '../components/LoginForm';
 import { homeFor, useAuthStore } from '../../../store/authStore';
+import { PageLoader } from '../../../components/ui/Spinner';
 
 export default function LoginPage() {
   const { session, profile, loading } = useAuthStore();
-  if (!loading && session && profile) return <Navigate to={homeFor(profile)} replace />;
+  // The installed app opens on /login. Until the saved session is checked, keep the launch splash up
+  // (PageLoader holds it) so a signed-in user goes straight to their dashboard without seeing this form.
+  if (loading) return <PageLoader label="Checking your session" />;
+  if (session && profile) return <Navigate to={homeFor(profile)} replace />;
 
   return (
     <AuthShell
