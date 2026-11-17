@@ -61,14 +61,6 @@ export default function PrescriptionView() {
   const allowManual = !online || Boolean(cfgQ.data?.manual_fallback);
   const [justUnlocked, setJustUnlocked] = useState(false);
 
-  // Unpaid and no receipt waiting for review: open the payment window straight away
-  useEffect(() => {
-    // Wait for the online options so the window opens on the right way to pay.
-    if (rx && rx.status === 'unpaid' && rx.payment_proof?.status !== 'pending' && !returning && !onlineQ.isLoading) {
-      setModalOpen(true);
-    }
-  }, [rx?.status, onlineQ.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
     if (rx?.status === 'unpaid') sawUnpaid.current = true;
     if (rx?.status === 'paid' && returning) clearCheckoutFlag();

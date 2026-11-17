@@ -21,13 +21,13 @@
       content="E-Prescription by ODYSSEY lets PRC-licensed doctors in the Philippines send prescriptions as a link. Patients pay by GCash or Maya QR to open them."
     />
     <meta name="author" content="Odysseyph IT Solutions" />
-    <link rel="canonical" href="__SITE_URL__/" />
+    <!-- Do not hardcode canonical or og:url to "/": every SPA route (including /rx/<id>) serves this file,
+         and Messenger/Facebook crawlers redirect shared links to the hardcoded og:url / canonical URL. -->
 
     <!-- Link previews: Facebook, Messenger, Viber, Telegram, WhatsApp, LinkedIn, iMessage, Slack, Discord -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="E-Prescription by ODYSSEY" />
     <meta property="og:locale" content="en_PH" />
-    <meta property="og:url" content="__SITE_URL__/" />
     <meta property="og:title" content="E-Prescription by ODYSSEY · Prescriptions sent as a link" />
     <meta
       property="og:description"
