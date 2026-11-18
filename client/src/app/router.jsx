@@ -30,6 +30,7 @@ const DoctorQrManagement = lazy(() => import('../features/doctor/pages/DoctorQrM
 const DoctorPlan = lazy(() => import('../features/doctor/pages/DoctorPlan'));
 const DoctorClinic = lazy(() => import('../features/doctor/pages/DoctorClinic'));
 const DoctorEarnings = lazy(() => import('../features/doctor/pages/DoctorEarnings'));
+const DoctorReferrals = lazy(() => import('../features/doctor/pages/DoctorReferrals'));
 
 const PrescriptionView = lazy(() => import('../features/patient/pages/PrescriptionView'));
 
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
           { path: '/doctor/plan', element: <DoctorPlan /> },
           { path: '/doctor/clinic', element: <DoctorClinic /> },
           { path: '/doctor/earnings', element: <DoctorEarnings /> },
+          { path: '/doctor/referrals', element: <DoctorReferrals /> },
         ],
       },
 

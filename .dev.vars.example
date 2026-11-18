@@ -1,0 +1,22 @@
+# Secrets for the Worker in local development (`npm run dev:worker`). Copy to .dev.vars, which git ignores.
+# In production set each with `npx wrangler secret put <NAME>`. Never give these a VITE_ name:
+# anything VITE_ is shipped to every browser.
+
+# Supabase dashboard -> Project Settings -> API
+SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# PayMongo dashboard -> Developers -> API Keys. Use the test key (sk_test_) until live testing is done.
+PAYMONGO_SECRET_KEY=sk_test_
+
+# PayMongo dashboard -> Developers -> Webhooks. Created when the webhook endpoint is registered (starts with whsk_).
+PAYMONGO_WEBHOOK_SECRET=whsk_
+
+# Public site address, used for the return links after checkout (no trailing slash).
+APP_URL=http://localhost:5173
+
+# Optional. The PayMongo Wallet account payouts are sent from. Leave empty to look it up automatically.
+PAYMONGO_SOURCE_ACCOUNT_NUMBER=
+PAYMONGO_SOURCE_ACCOUNT_NAME=
+PAYMONGO_SOURCE_ACCOUNT_BIC=

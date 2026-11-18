@@ -12,6 +12,7 @@ type RegisterDoctorPayload = {
   clinicName?: string | null;
   clinicAddress?: string | null;
   phone?: string | null;
+  referralCode?: string | null;
 };
 
 Deno.serve(async (req) => {
@@ -84,6 +85,8 @@ Deno.serve(async (req) => {
         clinic_name: body.clinicName?.trim() || '',
         clinic_address: body.clinicAddress?.trim() || '',
         phone: body.phone?.trim() || '',
+        // Linked to the referrer by a database trigger (0016_referrals.sql); unknown codes are ignored.
+        referral_code: (body.referralCode ?? '').trim().toUpperCase().slice(0, 20),
       },
     });
 

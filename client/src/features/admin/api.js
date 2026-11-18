@@ -356,3 +356,24 @@ export async function expenseReceiptUrl(path) {
   if (error) throw error;
   return data.signedUrl;
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// Referrals (0016_referrals.sql)
+// ---------------------------------------------------------------------------------------------------------
+
+export async function fetchAdminReferrals() {
+  const { data, error } = await db().rpc('admin_referrals');
+  if (error) throw error;
+  return data;
+}
+
+export async function saveReferralSettings(f) {
+  const { error } = await db().rpc('admin_set_referral_settings', {
+    p_enabled: Boolean(f.enabled),
+    p_required_rx: Number(f.requiredRx),
+    p_reward_rx: Number(f.rewardRx),
+    p_reward_days: Number(f.rewardDays),
+    p_monthly_cap: Number(f.monthlyCap),
+  });
+  if (error) throw error;
+}

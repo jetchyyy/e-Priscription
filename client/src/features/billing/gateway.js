@@ -1,34 +1,20 @@
 import { db, supabase } from '../../lib/supabase';
+import { callApi } from '../../lib/api';
 
 // ---------------------------------------------------------------------------------------------------------
-// Online payments through PayMongo. The browser never sees a PayMongo key: Edge Functions open checkouts,
+// Online payments through PayMongo. The browser never sees a PayMongo key: the Worker (/api/*, worker/src) opens checkouts,
 // send payouts and refunds, and only PayMongo's signed webhook marks anything paid.
 // ---------------------------------------------------------------------------------------------------------
 
-/** Calls an Edge Function and turns its { error } answer into a readable Error. */
-async function invoke(name, body) {
-  const { data, error } = await db().functions.invoke(name, { body });
-  if (error) {
-    let msg = 'Something went wrong. Please try again.';
-    try {
-      const b = await error.context?.json?.();
-      if (b?.error) msg = b.error;
-    } catch (_) { /* keep the generic message */ }
-    throw new Error(msg);
-  }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
-
 /** Opens PayMongo's payment page for a prescription, plan, seats or pack. Resolves only if it fails. */
 export async function startCheckout(body) {
-  const { checkout_url: url } = await invoke('paymongo-checkout', body);
+  const { checkout_url: url } = await callApi('paymongo-checkout', body);
   if (!url) throw new Error('Could not open the payment page. Please try again.');
   window.location.assign(url);
   return new Promise(() => {}); // the page is leaving
 }
 
-export const paymongoOps = (body) => invoke('paymongo-ops', body);
+export const paymongoOps = (body) => callApi('paymongo-ops', body);
 
 /** Whether online payments are on, and the fee for each method. */
 export async function fetchGatewayConfig() {

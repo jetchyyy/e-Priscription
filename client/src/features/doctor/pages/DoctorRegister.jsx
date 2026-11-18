@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'react-router-dom';
-import { CheckCircle2, MailCheck } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, Gift, MailCheck } from 'lucide-react';
 import { AuthShell } from '../../auth/components/AuthShell';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select } from '../../../components/ui/Input';
 import { friendlyAuthError } from '../../auth/api';
-import { registerDoctor } from '../api';
+import { lookupReferral, registerDoctor } from '../api';
 import { registerSchema } from '../schemas';
 
 const STEPS = [
@@ -32,7 +32,32 @@ function Section({ title, children }) {
   );
 }
 
+// The invite link is /doctor/register?ref=CODE. The code is kept in case the doctor leaves and comes back later.
+const REF_KEY = 'ereseta.referral_code';
+const REF_PATTERN = /^[A-Z0-9]{4,20}$/;
+
+function savedReferral(fromUrl) {
+  const code = (fromUrl ?? '').trim().toUpperCase();
+  try {
+    if (REF_PATTERN.test(code)) {
+      localStorage.setItem(REF_KEY, code);
+      return code;
+    }
+    const kept = localStorage.getItem(REF_KEY) ?? '';
+    return REF_PATTERN.test(kept) ? kept : '';
+  } catch {
+    return REF_PATTERN.test(code) ? code : '';
+  }
+}
+
+function forgetReferral() {
+  try { localStorage.removeItem(REF_KEY); } catch { /* storage blocked */ }
+}
+
 export default function DoctorRegister() {
+  const [params] = useSearchParams();
+  const [initialRef] = useState(() => savedReferral(params.get('ref')));
+  const [inviter, setInviter] = useState(null);
   const [result, setResult] = useState(null);
   const [serverError, setServerError] = useState('');
   const {
@@ -42,14 +67,25 @@ export default function DoctorRegister() {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { specialty: '', ptrNo: '', s2No: '', acceptTerms: false },
+    defaultValues: { specialty: '', ptrNo: '', s2No: '', referralCode: initialRef, acceptTerms: false },
   });
   const file = watch('licenseFile')?.[0];
+  const refCode = (watch('referralCode') ?? '').trim().toUpperCase();
+
+  useEffect(() => {
+    if (!REF_PATTERN.test(refCode)) { setInviter(null); return undefined; }
+    let live = true;
+    const t = setTimeout(() => {
+      lookupReferral(refCode).then((r) => { if (live) setInviter(r); }).catch(() => { if (live) setInviter(null); });
+    }, 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [refCode]);
 
   const onSubmit = async (values) => {
     setServerError('');
     try {
       setResult(await registerDoctor(values));
+      forgetReferral();
     } catch (err) {
       setServerError(friendlyAuthError(err));
     }
@@ -102,6 +138,13 @@ export default function DoctorRegister() {
           PRC-licensed physicians can register here to issue e-prescriptions.
         </p>
 
+        {inviter?.name && (
+          <p role="status" className="mt-4 flex items-center gap-2 rounded-[18px] bg-[#ece7de] px-4 py-3 text-sm text-[#152839]">
+            <Gift className="h-4 w-4 shrink-0 text-[#ff6f07]" aria-hidden="true" />
+            You were invited by Dr. {inviter.name}.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-6">
           {serverError && (
             <div role="alert" className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">
@@ -141,6 +184,10 @@ export default function DoctorRegister() {
               error={errors.clinicAddress?.message} {...register('clinicAddress')} />
             <Input label="Contact number" required type="tel" autoComplete="tel" placeholder="0917 123 4567"
               error={errors.phone?.message} {...register('phone')} />
+            <Input label="Referral code (optional)" autoCapitalize="characters" autoComplete="off" spellCheck={false}
+              placeholder="e.g. 7KQ4M2XA" maxLength={20}
+              hint={inviter?.name ? `Invited by Dr. ${inviter.name}` : 'From the doctor who invited you'}
+              error={errors.referralCode?.message} {...register('referralCode')} />
           </Section>
 
           <div className="space-y-2">

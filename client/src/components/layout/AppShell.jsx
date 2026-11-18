@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Home, FilePlus2, FlaskConical, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark, BarChart3, ScrollText } from 'lucide-react';
+import { Home, FilePlus2, FlaskConical, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark, BarChart3, ScrollText, Gift } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
@@ -18,6 +18,7 @@ const doctorNav = [
   { to: '/doctor/earnings', label: 'Earnings', icon: Wallet },
   { to: '/doctor/plan', label: 'Plan', icon: Gauge },
   { to: '/doctor/clinic', label: 'Clinic', icon: Building2 },
+  { to: '/doctor/referrals', label: 'Refer a doctor', icon: Gift },
 ];
 // Shown in the phone bottom bar; the rest live behind "More".
 const DOCTOR_BOTTOM = ['/doctor', '/doctor/new', '/doctor/lab-request'];

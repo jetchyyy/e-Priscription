@@ -1,7 +1,7 @@
 # Payment flow (PayMongo)
 
 ODYSSEY collects online payments through its own PayMongo account, as the doctors' collecting agent.
-Migration `0010_paymongo_gateway.sql` holds all the rules; the Edge Functions only talk to PayMongo.
+Migration `0010_paymongo_gateway.sql` holds all the rules; the Cloudflare Worker (`worker/src`, `/api/*`) only talks to PayMongo.
 
 ```mermaid
 sequenceDiagram
@@ -41,12 +41,12 @@ sequenceDiagram
   that cannot be applied. Nothing is lost; the admin refunds it, or approves the purchase in Payments to verify.
 
 ## PayMongo webhook
-URL: `https://<project-ref>.supabase.co/functions/v1/payment-webhook` (one per mode: test and live).
+URL: `https://<your-site>/api/payment-webhook` (one per mode: test and live).
 Events: `checkout_session.payment.paid`, `payment.failed`, `payment.refunded`, `payment.refund.updated`,
 `transfer.outward.successful`, `transfer.outward.failed`, `payout.deposited`, `payout.returned`.
 
-## Secrets (`supabase/functions/.env`, never in `client/.env`)
-`PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `APP_URL`, and optionally
+## Secrets (Worker secrets via `wrangler secret put`, `.dev.vars` locally; never in `client/.env`)
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `APP_URL`, and optionally
 `PAYMONGO_SOURCE_ACCOUNT_NUMBER|NAME|BIC` (the wallet payouts are sent from; otherwise read from `GET /v2/wallets`).
 
 ## Manual fallback

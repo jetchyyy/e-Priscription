@@ -1,4 +1,5 @@
 import { db } from '../../lib/supabase';
+import { ApiError, callApi } from '../../lib/api';
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
 
@@ -23,54 +24,32 @@ export async function uploadLicense(userId, file) {
 export async function registerDoctor(values) {
   const supabase = db();
 
-  // 1. Register account via register-doctor Edge Function
-  // Safely creates auth.users + auth.identities via GoTrue admin API
+  // 1. Create the account through the Worker (/api/register-doctor), which uses the Auth admin API.
   let userId = null;
   let registrationSuccess = false;
+  const body = {
+    email: values.email,
+    password: values.password,
+    fullName: values.fullName,
+    prcNo: values.prcNo,
+    ptrNo: values.ptrNo || null,
+    s2No: values.s2No || null,
+    specialty: values.specialty || null,
+    clinicName: values.clinicName || null,
+    clinicAddress: values.clinicAddress || null,
+    phone: values.phone || null,
+    referralCode: values.referralCode || null,
+  };
 
   try {
-    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('register-doctor', {
-      body: {
-        email: values.email,
-        password: values.password,
-        fullName: values.fullName,
-        prcNo: values.prcNo,
-        ptrNo: values.ptrNo || null,
-        s2No: values.s2No || null,
-        specialty: values.specialty || null,
-        clinicName: values.clinicName || null,
-        clinicAddress: values.clinicAddress || null,
-        phone: values.phone || null,
-      },
-    });
-
-    if (edgeError) {
-      let errMsg = edgeError.message;
-      if (edgeError.context && typeof edgeError.context.json === 'function') {
-        try {
-          const body = await edgeError.context.json();
-          if (body?.error) errMsg = body.error;
-        } catch (_) {}
-      }
-      throw new Error(errMsg);
-    }
-
-    if (edgeData?.error) {
-      throw new Error(edgeData.error);
-    }
-
-    if (edgeData?.userId) {
-      userId = edgeData.userId;
-      registrationSuccess = true;
-    }
+    const data = await callApi('register-doctor', body);
+    userId = data?.userId ?? null;
+    registrationSuccess = Boolean(userId);
   } catch (err) {
-    // If the Edge Function is not deployed or unreachable in local dev, fall back to standard signUp
-    const isNetworkOrNotFound = /failed to send|not found|404|fetch/i.test(err?.message || '');
-    if (!isNetworkOrNotFound && err?.message && !err.message.includes('FunctionsHttpError')) {
-      throw err;
-    }
-
-    console.warn('Edge Function register-doctor unavailable, falling back to auth.signUp:', err.message);
+    // Only when the Worker is not running (e.g. `npm run dev` without `npm run dev:worker`): fall back to signUp.
+    // Every real answer from the Worker, such as "email already registered", is shown as it is.
+    if (!(err instanceof ApiError) || ![0, 404, 502, 503, 504].includes(err.status)) throw err;
+    console.warn('/api/register-doctor unavailable, falling back to auth.signUp:', err.message);
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -84,6 +63,7 @@ export async function registerDoctor(values) {
           clinic_name: values.clinicName,
           clinic_address: values.clinicAddress,
           phone: values.phone,
+          referral_code: (values.referralCode ?? '').trim().toUpperCase(),
         },
       },
     });
@@ -586,6 +566,24 @@ export async function cancelPayout(id) {
 /** month: 'YYYY-MM' */
 export async function fetchStatement(month) {
   const { data, error } = await db().rpc('my_statement', { p_month: `${month}-01` });
+  if (error) throw error;
+  return data;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Referrals (0016_referrals.sql)
+// ---------------------------------------------------------------------------------------------------------
+
+/** "Invited by Juan D." on the sign-up page, or null for an unknown code. Works without signing in. */
+export async function lookupReferral(code) {
+  const { data, error } = await db().rpc('referral_lookup', { p_code: code });
+  if (error) throw error;
+  return data;
+}
+
+/** My referral code, the current rules and the doctors I invited. */
+export async function fetchMyReferrals() {
+  const { data, error } = await db().rpc('my_referrals');
   if (error) throw error;
   return data;
 }

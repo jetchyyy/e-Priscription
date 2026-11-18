@@ -3,7 +3,7 @@ import { Check, Copy, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../../../components/ui/Button';
 
-async function copyText(text) {
+export async function copyText(text) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -17,14 +17,14 @@ async function copyText(text) {
   return undefined;
 }
 
-export function CopyLinkButton({ link, size = 'sm', variant = 'secondary', label = 'Copy link', className }) {
+export function CopyLinkButton({ link, size = 'sm', variant = 'secondary', label = 'Copy link', copiedMessage = 'Prescription link copied', className }) {
   const [copied, setCopied] = useState(false);
 
   const onCopy = async () => {
     try {
       await copyText(link);
       setCopied(true);
-      toast.success('Prescription link copied');
+      toast.success(copiedMessage);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Could not copy. Long-press the link to copy it manually.');
@@ -40,13 +40,19 @@ export function CopyLinkButton({ link, size = 'sm', variant = 'secondary', label
 }
 
 /** Native share sheet on phones; renders nothing where unsupported. */
-export function ShareLinkButton({ link, title = 'Your E-Reseta prescription', size = 'md', className }) {
+export function ShareLinkButton({
+  link,
+  title = 'Your E-Reseta prescription',
+  text = 'Here is your prescription. Open the link to view it securely.',
+  size = 'md',
+  className,
+}) {
   if (typeof navigator === 'undefined' || !navigator.share) return null;
   const onShare = async () => {
     try {
       await navigator.share({
         title,
-        text: 'Here is your prescription. Open the link to view it securely.',
+        text,
         url: link,
       });
     } catch (e) {

@@ -46,7 +46,23 @@ export default defineConfig(({ mode }) => {
   const siteUrl = (env.VITE_APP_URL || DEFAULT_SITE_URL).replace(/\/$/, '');
   return {
     plugins: [react(), siteUrlPlugin(siteUrl)],
-    server: { port: 5173 },
+    server: {
+      port: 5173,
+      // Server code runs in the Cloudflare Worker (worker/src). Start it with `npm run dev:worker` (port 8787).
+      proxy: {
+        '/api': {
+          target: env.WORKER_DEV_URL || 'http://127.0.0.1:8787',
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              if (res.headersSent) return;
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'The local Worker is not running. Start it with npm run dev:worker.' }));
+            });
+          },
+        },
+      },
+    },
     test: { environment: 'node' },
   };
 });

@@ -95,7 +95,7 @@ export function PlanUsage() {
           )}
           {credits(plan) > 0 && (
             <p className="mt-1 text-sm font-medium text-[#152839]">
-              Plus {n(credits(plan))} bought prescription{credits(plan) === 1 ? '' : 's'}
+              Plus {n(credits(plan))} extra prescription{credits(plan) === 1 ? '' : 's'}
               {plan.credits.expires_at ? `, the first ${credits(plan) === 1 ? 'expires' : 'batch expires'} ${formatDate(plan.credits.expires_at)}` : ''}
             </p>
           )}
@@ -147,7 +147,7 @@ export function PlanUsageNotice() {
   const clinic = plan.clinic;
   const isMember = clinic?.role === 'doctor';
   if (level === 'ok') {
-    return <p className="text-sm text-[#45546a]">{n(plan.rx_left)} prescriptions left{clinic ? ` in ${clinic.name}` : ` on ${plan.plan_name}`}{credits(plan) ? `, including ${n(credits(plan))} bought` : ' this month'}.</p>;
+    return <p className="text-sm text-[#45546a]">{n(plan.rx_left)} prescriptions left{clinic ? ` in ${clinic.name}` : ` on ${plan.plan_name}`}{credits(plan) ? `, including ${n(credits(plan))} extra` : ' this month'}.</p>;
   }
   return (
     <div role={level === 'out' ? 'alert' : 'status'} className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">

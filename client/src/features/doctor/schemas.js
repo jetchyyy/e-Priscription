@@ -37,6 +37,12 @@ export const registerSchema = z
     clinicName: text('Clinic / hospital name', 2, 150),
     clinicAddress: text('Clinic address', 5, 250),
     phone: phSchema,
+    referralCode: z
+      .string()
+      .trim()
+      .transform((s) => s.toUpperCase())
+      .pipe(z.union([z.literal(''), z.string().regex(/^[A-Z0-9]{4,20}$/, 'Referral codes are 4–20 letters and numbers')]))
+      .optional(),
     licenseFile: z
       .any()
       .refine((f) => f?.length === 1, 'Upload a photo or PDF of your PRC license')
