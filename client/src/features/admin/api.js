@@ -210,6 +210,7 @@ const rpc = async (name, args) => {
 };
 
 export const fetchMoneyOverview = () => rpc('admin_money_overview');
+export const fetchAppAnalytics = (range = '30d') => rpc('admin_app_analytics', { p_range: range });
 export const fetchGatewayAdminConfig = () => rpc('admin_gateway_config');
 export const fetchGatewayPayments = (filter = 'all') => rpc('admin_gateway_payments', { p_filter: filter });
 export const fetchAdminPayouts = (filter = 'open') => rpc('admin_payouts', { p_filter: filter });

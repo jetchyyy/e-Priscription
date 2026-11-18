@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Home, FilePlus2, FlaskConical, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark } from 'lucide-react';
+import { Home, FilePlus2, FlaskConical, ShieldCheck, Stethoscope, QrCode, Gauge, ReceiptText, Building2, Wallet, Landmark, BarChart3 } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
@@ -24,6 +24,7 @@ const DOCTOR_BOTTOM = ['/doctor', '/doctor/new', '/doctor/lab-request'];
 
 const adminNav = [
   { to: '/admin', label: 'Doctor approvals', icon: ShieldCheck, end: true },
+  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/billing', label: 'Plans and billing', icon: ReceiptText },
   { to: '/admin/money', label: 'Money and payouts', icon: Landmark },
 ];

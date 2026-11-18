@@ -16,6 +16,7 @@ const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/admin/pages/AdminLoginPage'));
 
 const AdminDashboard = lazy(() => import('../features/admin/pages/AdminDashboard'));
+const AdminAnalytics = lazy(() => import('../features/admin/pages/AdminAnalytics'));
 const AdminBilling = lazy(() => import('../features/admin/pages/AdminBilling'));
 const AdminMoney = lazy(() => import('../features/admin/pages/AdminMoney'));
 
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
         element: <RequireRole role="admin"><AppShell /></RequireRole>,
         children: [
           { path: '/admin', element: <AdminDashboard /> },
+          { path: '/admin/analytics', element: <AdminAnalytics /> },
           { path: '/admin/billing', element: <AdminBilling /> },
           { path: '/admin/money', element: <AdminMoney /> },
         ],
