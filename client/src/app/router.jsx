@@ -17,6 +17,7 @@ const AdminLoginPage = lazy(() => import('../features/admin/pages/AdminLoginPage
 
 const AdminDashboard = lazy(() => import('../features/admin/pages/AdminDashboard'));
 const AdminAnalytics = lazy(() => import('../features/admin/pages/AdminAnalytics'));
+const AdminAuditLogs = lazy(() => import('../features/admin/pages/AdminAuditLogs'));
 const AdminBilling = lazy(() => import('../features/admin/pages/AdminBilling'));
 const AdminMoney = lazy(() => import('../features/admin/pages/AdminMoney'));
 
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin', element: <AdminDashboard /> },
           { path: '/admin/analytics', element: <AdminAnalytics /> },
+          { path: '/admin/audit', element: <AdminAuditLogs /> },
           { path: '/admin/billing', element: <AdminBilling /> },
           { path: '/admin/money', element: <AdminMoney /> },
         ],

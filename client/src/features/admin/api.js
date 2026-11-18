@@ -211,6 +211,95 @@ const rpc = async (name, args) => {
 
 export const fetchMoneyOverview = () => rpc('admin_money_overview');
 export const fetchAppAnalytics = (range = '30d') => rpc('admin_app_analytics', { p_range: range });
+
+export const fetchAuditLogs = ({
+  limit = 50,
+  cursor = null,
+  category = '',
+  action = '',
+  search = '',
+  from = null,
+  to = null,
+} = {}) =>
+  rpc('admin_audit_logs', {
+    p_limit: limit,
+    p_cursor_at: cursor?.created_at ?? null,
+    p_cursor_id: cursor?.id ?? null,
+    p_category: category || null,
+    p_action: action || null,
+    p_search: search || null,
+    p_from: from || null,
+    p_to: to || null,
+  });
+
+export const fetchAuditSummary = ({ category = '', action = '', search = '', from = null, to = null } = {}) =>
+  rpc('admin_audit_summary', {
+    p_category: category || null,
+    p_action: action || null,
+    p_search: search || null,
+    p_from: from || null,
+    p_to: to || null,
+  });
+
+/**
+ * Parallel-loaded keyset export so >1,000+ audit rows export cleanly without hitting
+ * PostgREST's 1,000-row cap or slow OFFSET scans.
+ */
+export async function exportAllAuditLogs({ category = '', action = '', search = '', from = null, to = null, summary = null } = {}) {
+  const s = summary ?? (await fetchAuditSummary({ category, action, search, from, to }));
+  const total = Number(s?.total_matching) || 0;
+  if (total === 0) return [];
+
+  if (total <= 500 || !s?.min_created_at || !s?.max_created_at || s.min_created_at === s.max_created_at) {
+    const all = [];
+    let cursor = null;
+    while (true) {
+      const page = await fetchAuditLogs({ limit: 500, cursor, category, action, search, from, to });
+      all.push(...(page?.items ?? []));
+      if (!page?.has_more || !page?.next_cursor) break;
+      cursor = page.next_cursor;
+    }
+    return all;
+  }
+
+  const minMs = new Date(s.min_created_at).getTime();
+  const maxMs = new Date(s.max_created_at).getTime();
+  const sliceCount = Math.min(6, Math.max(2, Math.ceil(total / 500)));
+  const span = Math.max(1, maxMs - minMs);
+
+  const slices = Array.from({ length: sliceCount }, (_, i) => {
+    const sliceFrom = new Date(minMs + Math.floor((span * i) / sliceCount)).toISOString();
+    const sliceTo = i === sliceCount - 1 ? s.max_created_at : new Date(minMs + Math.floor((span * (i + 1)) / sliceCount)).toISOString();
+    return { sliceFrom, sliceTo };
+  });
+
+  const fetchSlice = async ({ sliceFrom, sliceTo }) => {
+    const rows = [];
+    let cursor = null;
+    while (true) {
+      const page = await fetchAuditLogs({
+        limit: 500,
+        cursor,
+        category,
+        action,
+        search,
+        from: sliceFrom,
+        to: sliceTo,
+      });
+      rows.push(...(page?.items ?? []));
+      if (!page?.has_more || !page?.next_cursor) break;
+      cursor = page.next_cursor;
+    }
+    return rows;
+  };
+
+  const results = await Promise.all(slices.map(fetchSlice));
+  const byId = new Map();
+  for (const list of results) {
+    for (const row of list) byId.set(row.id, row);
+  }
+  return Array.from(byId.values()).sort((a, b) => Number(b.id) - Number(a.id));
+}
 export const fetchGatewayAdminConfig = () => rpc('admin_gateway_config');
 export const fetchGatewayPayments = (filter = 'all') => rpc('admin_gateway_payments', { p_filter: filter });
 export const fetchAdminPayouts = (filter = 'open') => rpc('admin_payouts', { p_filter: filter });
