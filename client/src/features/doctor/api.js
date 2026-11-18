@@ -168,6 +168,36 @@ export async function fetchMyPrescriptions() {
   return data;
 }
 
+export async function fetchDoctorMonthSummary() {
+  const { data, error } = await db().rpc('doctor_month_summary');
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchMyPrescriptionsPage({
+  limit = 15,
+  page = 1,
+  cursorAt = null,
+  cursorId = null,
+  direction = 'jump',
+  search = '',
+  kind = 'all',
+  status = 'all',
+} = {}) {
+  const { data, error } = await db().rpc('doctor_prescriptions_page', {
+    p_limit: limit,
+    p_page: page,
+    p_cursor_at: cursorAt,
+    p_cursor_id: cursorId,
+    p_direction: direction,
+    p_search: search || null,
+    p_kind: kind,
+    p_status: status,
+  });
+  if (error) throw error;
+  return data;
+}
+
 /** Fields an administrator verifies. Once a doctor is approved they change only through a change request. */
 export const VERIFIED_FIELDS = ['full_name', 'prc_no', 'specialty', 's2_no'];
 

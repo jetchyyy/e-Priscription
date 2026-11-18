@@ -1,13 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ExternalLink, FilePlus2, FlaskConical, Search } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
 import { PaymentBadge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
+import { Pagination } from '../../../components/ui/Pagination';
 import { Ody } from '../../marketing/components';
 import { formatPeso, formatShortDate, rxLink } from '../../../lib/utils';
 import { CopyLinkButton, ShareLinkButton } from './CopyLinkButton';
-import { Link } from 'react-router-dom';
 
 function Actions({ id }) {
   const link = rxLink(id);
@@ -61,15 +60,44 @@ function FilterPills({ label, options, value, onChange }) {
   );
 }
 
-/** Prescriptions and lab requests with search, type and status filters, a table, and a mobile card view. */
-export function PrescriptionHistory({ items = [], loading }) {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // 'all' | 'paid' | 'waiting'
-  const [type, setType] = useState('all'); // 'all' | 'rx' | 'lab'
+/**
+ * Prescriptions and lab requests with search, type and status filters, a table, a mobile card view,
+ * and scalable pagination. Works both with server-side pagination (`pagination` prop) and plain `items`.
+ */
+export function PrescriptionHistory({
+  items = [],
+  loading,
+  fetching = false,
+  search: controlledSearch,
+  onSearchChange,
+  filter: controlledFilter,
+  onFilterChange,
+  type: controlledType,
+  onTypeChange,
+  totalUnfiltered,
+  pagination,
+}) {
+  const [localSearch, setLocalSearch] = useState('');
+  const [localFilter, setLocalFilter] = useState('all'); // 'all' | 'paid' | 'waiting'
+  const [localType, setLocalType] = useState('all'); // 'all' | 'rx' | 'lab'
+  const [localPage, setLocalPage] = useState(1);
+  const [localPageSize, setLocalPageSize] = useState(15);
+
+  const isServer = Boolean(pagination);
+  const search = onSearchChange ? (controlledSearch ?? '') : localSearch;
+  const setSearch = onSearchChange ?? setLocalSearch;
+  const filter = onFilterChange ? (controlledFilter ?? 'all') : localFilter;
+  const setFilter = onFilterChange ?? setLocalFilter;
+  const type = onTypeChange ? (controlledType ?? 'all') : localType;
+  const setType = onTypeChange ?? setLocalType;
 
   const filtered = useMemo(() => {
+    if (isServer) return items;
     return items.filter((rx) => {
-      const matchSearch = !search.trim() || rx.patient_name?.toLowerCase().includes(search.toLowerCase());
+      const matchSearch =
+        !search.trim() ||
+        rx.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
+        rx.id?.toLowerCase().startsWith(search.trim().toLowerCase());
       const matchStatus =
         filter === 'all' ||
         (filter === 'paid' && rx.payment_status === 'paid') ||
@@ -78,7 +106,20 @@ export function PrescriptionHistory({ items = [], loading }) {
       const matchType = type === 'all' || (type === 'lab' ? isLab : !isLab);
       return matchSearch && matchStatus && matchType;
     });
-  }, [items, search, filter, type]);
+  }, [isServer, items, search, filter, type]);
+
+  useEffect(() => {
+    if (!isServer) setLocalPage(1);
+  }, [isServer, search, filter, type, localPageSize]);
+
+  const localTotalPages = Math.max(1, Math.ceil(filtered.length / localPageSize));
+  const safeLocalPage = Math.min(localPage, localTotalPages);
+
+  const visibleRows = useMemo(() => {
+    if (isServer) return filtered;
+    const start = (safeLocalPage - 1) * localPageSize;
+    return filtered.slice(start, start + localPageSize);
+  }, [isServer, filtered, safeLocalPage, localPageSize]);
 
   if (loading) {
     return (
@@ -90,7 +131,8 @@ export function PrescriptionHistory({ items = [], loading }) {
     );
   }
 
-  if (!items?.length) {
+  const hasAnyAtAll = totalUnfiltered != null ? totalUnfiltered > 0 : items?.length > 0;
+  if (!hasAnyAtAll) {
     return (
       <div className="flex flex-col items-center justify-center rounded-[20px] border border-[#dce1e8] bg-white p-12 text-center">
         <Ody mood="happy" alt="Ody mascot" className="w-28 mb-4" />
@@ -116,14 +158,27 @@ export function PrescriptionHistory({ items = [], loading }) {
     );
   }
 
+  const pagerProps = isServer
+    ? { ...pagination, loading: fetching || pagination.loading, itemLabel: 'documents' }
+    : {
+        page: safeLocalPage,
+        totalPages: localTotalPages,
+        totalItems: filtered.length,
+        pageSize: localPageSize,
+        onPageChange: setLocalPage,
+        onPageSizeChange: setLocalPageSize,
+        itemLabel: 'documents',
+      };
+
   return (
     <div className="space-y-4">
       {/* Search and status filter bar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full lg:w-72">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f6a7c]" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f6a7c]" aria-hidden="true" />
           <input
             type="search"
+            aria-label="Search patient name or reference number"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search patient name…"
@@ -136,12 +191,12 @@ export function PrescriptionHistory({ items = [], loading }) {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {visibleRows.length === 0 ? (
         <div className="rounded-[20px] border border-[#dce1e8] bg-white p-8 text-center text-sm text-[#5f6a7c]">
           Nothing matches your search.
         </div>
       ) : (
-        <>
+        <div className={fetching ? 'space-y-4 opacity-70 transition-opacity' : 'space-y-4'}>
           {/* Desktop Table (section 11.4) */}
           <div className="hidden overflow-hidden rounded-[20px] border border-[#dce1e8] bg-white md:block">
             <table className="w-full text-left text-sm">
@@ -157,7 +212,7 @@ export function PrescriptionHistory({ items = [], loading }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#dce1e8]">
-                {filtered.map((rx) => (
+                {visibleRows.map((rx) => (
                   <tr key={rx.id} className="hover:bg-[#f9f8f3]/60 transition">
                     <td className="px-6 py-4 text-[#5f6a7c] whitespace-nowrap">{formatShortDate(rx.created_at)}</td>
                     <td className="px-6 py-4">
@@ -182,7 +237,7 @@ export function PrescriptionHistory({ items = [], loading }) {
 
           {/* Mobile cards (section 11.4: each row becomes a white card) */}
           <ul className="space-y-3 md:hidden">
-            {filtered.map((rx) => (
+            {visibleRows.map((rx) => (
               <li key={rx.id}>
                 <div className="rounded-[20px] border border-[#dce1e8] bg-white p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
@@ -204,7 +259,9 @@ export function PrescriptionHistory({ items = [], loading }) {
               </li>
             ))}
           </ul>
-        </>
+
+          <Pagination {...pagerProps} />
+        </div>
       )}
     </div>
   );

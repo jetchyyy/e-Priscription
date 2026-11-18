@@ -1,16 +1,14 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { FilePlus2, FlaskConical } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { PrescriptionHistory } from '../components/PrescriptionHistory';
 import { PaymentsToConfirm } from '../components/PaymentsToConfirm';
 import { ClinicNotices, PlanUsage } from '../components/PlanUsage';
-import { fetchMyPrescriptions } from '../api';
+import { fetchDoctorMonthSummary, fetchMyPrescriptionsPage } from '../api';
 import { useAuthStore } from '../../../store/authStore';
 import { doctorTitle, formatPeso } from '../../../lib/utils';
-
-const manilaMonth = (d) =>
-  new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: '2-digit', timeZone: 'Asia/Manila' }).format(new Date(d));
 
 function getManilaGreeting() {
   const hour = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', hour12: false });
@@ -22,19 +20,90 @@ function getManilaGreeting() {
 
 export default function DoctorDashboard() {
   const profile = useAuthStore((s) => s.profile);
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['doctor', 'prescriptions'],
-    queryFn: fetchMyPrescriptions,
+
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState('all');
+  const [filter, setFilter] = useState('all');
+  const [pageSize, setPageSize] = useState(15);
+  const [nav, setNav] = useState({ page: 1, direction: 'jump', cursorAt: null, cursorId: null });
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const trimmed = searchInput.trim();
+      if (trimmed !== search) {
+        setSearch(trimmed);
+        setNav({ page: 1, direction: 'jump', cursorAt: null, cursorId: null });
+      }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [searchInput, search]);
+
+  const summaryQ = useQuery({
+    queryKey: ['doctor', 'month-summary'],
+    queryFn: fetchDoctorMonthSummary,
     refetchInterval: 15_000,
   });
 
-  const items = data ?? [];
-  const month = manilaMonth(new Date());
-  const thisMonth = items.filter((r) => manilaMonth(r.created_at) === month);
-  const waiting = thisMonth.filter((r) => r.payment_status !== 'paid').length;
-  const collected = items
-    .filter((r) => r.payment_status === 'paid' && manilaMonth(r.paid_at ?? r.created_at) === month)
-    .reduce((sum, r) => sum + Number(r.amount), 0);
+  const pageQ = useQuery({
+    queryKey: ['doctor', 'prescriptions-page', { page: nav.page, pageSize, search, type, filter, direction: nav.direction, cursorId: nav.cursorId }],
+    queryFn: () =>
+      fetchMyPrescriptionsPage({
+        limit: pageSize,
+        page: nav.page,
+        cursorAt: nav.cursorAt,
+        cursorId: nav.cursorId,
+        direction: nav.direction,
+        search,
+        kind: type,
+        status: filter,
+      }),
+    placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
+  });
+
+  const pageData = pageQ.data;
+  const items = pageData?.items ?? [];
+  const waiting = summaryQ.data?.waiting_count ?? 0;
+  const collected = summaryQ.data?.collected_amount ?? 0;
+
+  const handleTypeChange = (nextType) => {
+    setType(nextType);
+    setNav({ page: 1, direction: 'jump', cursorAt: null, cursorId: null });
+  };
+
+  const handleFilterChange = (nextFilter) => {
+    setFilter(nextFilter);
+    setNav({ page: 1, direction: 'jump', cursorAt: null, cursorId: null });
+  };
+
+  const handlePageSizeChange = (nextSize) => {
+    setPageSize(nextSize);
+    setNav({ page: 1, direction: 'jump', cursorAt: null, cursorId: null });
+  };
+
+  const handlePageChange = (targetPage) => {
+    const currentPage = pageData?.page ?? nav.page;
+    if (targetPage === currentPage + 1 && pageData?.last_cursor) {
+      setNav({
+        page: targetPage,
+        direction: 'next',
+        cursorAt: pageData.last_cursor.created_at,
+        cursorId: pageData.last_cursor.id,
+      });
+      return;
+    }
+    if (targetPage === currentPage - 1 && pageData?.first_cursor && targetPage > 1) {
+      setNav({
+        page: targetPage,
+        direction: 'prev',
+        cursorAt: pageData.first_cursor.created_at,
+        cursorId: pageData.first_cursor.id,
+      });
+      return;
+    }
+    setNav({ page: targetPage, direction: 'jump', cursorAt: null, cursorId: null });
+  };
 
   const greeting = getManilaGreeting();
   const doctorName = profile?.full_name ? doctorTitle(profile.full_name) : 'Doctor';
@@ -110,12 +179,34 @@ export default function DoctorDashboard() {
 
       <section aria-labelledby="history-h">
         <h2 id="history-h" className="mb-4 font-display text-xl font-semibold text-[#152839]">Prescriptions and lab requests</h2>
-        {isError ? (
+        {pageQ.isError ? (
           <div role="alert" className="rounded-[18px] border border-[#f3c2af] bg-[#fbe9e1] p-5 text-sm text-[#7a2406]">
-            We couldn’t load your prescriptions and lab requests. <button className="font-semibold underline ml-1" onClick={() => refetch()}>Try again</button>
+            We couldn’t load your prescriptions and lab requests.{' '}
+            <button className="font-semibold underline ml-1" onClick={() => pageQ.refetch()}>Try again</button>
           </div>
         ) : (
-          <PrescriptionHistory items={items} loading={isLoading} />
+          <PrescriptionHistory
+            items={items}
+            loading={pageQ.isLoading}
+            fetching={pageQ.isFetching}
+            search={searchInput}
+            onSearchChange={setSearchInput}
+            type={type}
+            onTypeChange={handleTypeChange}
+            filter={filter}
+            onFilterChange={handleFilterChange}
+            totalUnfiltered={pageData?.total_unfiltered}
+            pagination={{
+              page: pageData?.page ?? nav.page,
+              totalPages: pageData?.total_pages ?? 1,
+              totalItems: pageData?.total_count ?? 0,
+              pageSize: pageData?.page_size ?? pageSize,
+              hasPrev: pageData?.has_prev ?? false,
+              hasNext: pageData?.has_next ?? false,
+              onPageChange: handlePageChange,
+              onPageSizeChange: handlePageSizeChange,
+            }}
+          />
         )}
       </section>
     </div>
