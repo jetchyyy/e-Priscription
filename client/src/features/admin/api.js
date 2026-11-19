@@ -306,10 +306,16 @@ export const fetchAdminPayouts = (filter = 'open') => rpc('admin_payouts', { p_f
 export const fetchDoctorBalances = () => rpc('admin_doctor_balances');
 export const fetchTaxSummary = (year) => rpc('admin_tax_summary', { p_year: year });
 
-export const saveGatewaySettings = (s) => rpc('admin_set_gateway_settings', {
-  p_enabled: s.enabled, p_manual_fallback: s.manual_fallback, p_hold_days: Number(s.hold_days),
-  p_min_payout: Number(s.min_payout), p_payout_fee: Number(s.payout_fee),
-});
+export async function saveGatewaySettings(s) {
+  await rpc('admin_set_gateway_settings', {
+    p_enabled: s.enabled, p_manual_fallback: s.manual_fallback, p_hold_days: Number(s.hold_days),
+    p_min_payout: Number(s.min_payout), p_payout_fee: Number(s.payout_fee),
+  });
+  if (s.withholding_pct != null) await rpc('admin_set_withholding', { p_pct: Number(s.withholding_pct) }); // migration 0018
+}
+
+/** Creates this week's payouts now (the Saturday cron does the same). Returns { created, total, below_minimum }. */
+export const prepareWeeklyPayouts = () => rpc('admin_prepare_weekly_payouts');
 
 export const saveFeeRate = (r) => rpc('admin_set_fee_rate', {
   p_method: r.method, p_enabled: r.is_enabled, p_fee_pct: Number(r.fee_pct), p_fee_fixed: Number(r.fee_fixed),

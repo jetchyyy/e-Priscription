@@ -552,6 +552,7 @@ export async function setPayoutAccount({ provider, bankCode, bankName, accountNa
   if (error) throw error;
 }
 
+// Doctors no longer ask for payouts: they are prepared every Saturday (migration 0018). Kept for older screens.
 export async function requestPayout(amount) {
   const { data, error } = await db().rpc('request_payout', { p_amount: amount });
   if (error) throw error;

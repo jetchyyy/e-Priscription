@@ -10,7 +10,7 @@ import { downloadCsv, money } from '../../../lib/csv';
 import { EIGHT_PCT_LIMIT, EXEMPT, taxOptions } from '../../../lib/tax';
 import { feeFor, paymongoOps, rateText } from '../../billing/gateway';
 import {
-  addExpense, deleteExpense, expenseReceiptUrl, fetchAdminPayouts, fetchDoctorBalances, fetchExpenses,
+  addExpense, deleteExpense, expenseReceiptUrl, fetchAdminPayouts, prepareWeeklyPayouts, fetchDoctorBalances, fetchExpenses,
   fetchGatewayAdminConfig, fetchGatewayPayments, fetchMoneyOverview, fetchTaxSummary, rejectPayout, resolvePayout,
   saveFeeRate, saveGatewaySettings,
 } from '../api';
@@ -102,13 +102,17 @@ function Overview() {
             ['Transfer fee difference', o.payout_fee_diff],
             ['ODYSSEY earned', o.odyssey_earned, true],
           ]} />
+          <Rows rows={[
+            ['Tax withheld by PayMongo on ODYSSEY’s part (credit on your BIR 2307)', o.tax_withheld_odyssey ?? 0],
+            ['Tax withheld on doctors’ shares (taken from their shares)', o.tax_withheld_doctors ?? 0],
+          ]} />
         </section>
         <section className="space-y-3">
           <h2 className="font-display text-lg font-semibold text-[#152839]">Doctors’ money (held for them)</h2>
           <Rows rows={[
             ['Their shares of prescription payments, less payouts and refunds', o.owed_to_doctors, true],
-            ['On hold (inside the hold period)', o.doctors_on_hold],
-            ['Available for them to ask for', o.doctors_available],
+            ['Waiting for PayMongo’s Thursday settlement', o.doctors_on_hold],
+            ['Ready for Saturday’s payout', o.doctors_available],
             ['In payouts being sent', o.payouts_requested],
             ['Owed back by doctors after refunds', o.doctors_owing],
             ['Refunded to patients so far', o.refunded],
@@ -123,7 +127,7 @@ function Overview() {
           a payment or transfer the system has not heard about yet, or money moved outside the system.
         </p>
         <Rows rows={[
-          ['All money in, less PayMongo charges, payouts and refunds', o.ledger_total],
+          ['All money in, less PayMongo charges, withheld tax, payouts and refunds', o.ledger_total],
           ['PayMongo payouts to ODYSSEY’s bank', -Number(o.settled_to_bank)],
           ['Should be with PayMongo', o.expected_with_paymongo, true],
           ['Held aside (needs review)', o.suspense],
@@ -227,18 +231,65 @@ function PayoutCard({ p }) {
   );
 }
 
+/** Prepare this week's payouts now, or send every ready one whose account name matches the verified doctor. */
+function WeeklyRun({ payouts }) {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: KEY });
+  const ready = payouts.filter((p) => p.status === 'requested' && p.name_matches);
+  const unclear = payouts.filter((p) => p.status === 'requested' && !p.name_matches).length;
+  const [progress, setProgress] = useState(null);
+
+  const prepare = useMutation({
+    mutationFn: prepareWeeklyPayouts,
+    onSuccess: (r) => {
+      refresh();
+      toast.success(r.created ? `${r.created} payout${r.created === 1 ? '' : 's'} prepared, ${formatPeso(r.total)} in all` : 'No new payouts to prepare');
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const sendAll = async () => {
+    let sent = 0;
+    const failed = [];
+    for (const [i, p] of ready.entries()) {
+      setProgress(`Sending ${i + 1} of ${ready.length}…`);
+      try { await paymongoOps({ action: 'send_payout', payout_id: p.id }); sent += 1; } // one at a time: each has its own idempotency key
+      catch (e) { failed.push(`${p.doctor_name}: ${e.message}`); }
+    }
+    setProgress(null);
+    refresh();
+    if (sent) toast.success(`${sent} payout${sent === 1 ? '' : 's'} sent to PayMongo`);
+    failed.forEach((f) => toast.error(f));
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-[18px] bg-[#f9f8f3] p-4">
+      <Button variant="secondary" loading={prepare.isPending} onClick={() => prepare.mutate()}>Prepare this week’s payouts now</Button>
+      <Button variant="accent" disabled={!ready.length || Boolean(progress)} loading={Boolean(progress)}
+        onClick={() => { if (window.confirm(`Send ${ready.length} payout${ready.length === 1 ? '' : 's'}, ${formatPeso(ready.reduce((t, p) => t + Number(p.net_amount), 0))} in all?`)) sendAll(); }}>
+        {progress ?? `Send all ready (${ready.length})`}
+      </Button>
+      {unclear > 0 && <p className="text-sm text-[#7a2406]">{unclear} with an account name that does not match. Check and send those one by one below.</p>}
+    </div>
+  );
+}
+
 function Payouts() {
   const [filter, setFilter] = useState('open');
   const q = useQuery({ queryKey: [...KEY, 'payouts', filter], queryFn: () => fetchAdminPayouts(filter), refetchInterval: 30_000 });
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-[#45546a]">Check the account name, then send. The transfer fee comes out of the amount, so the doctor receives the “send” figure.</p>
+        <p className="max-w-2xl text-sm text-[#45546a]">
+          Every Saturday 8:00 AM the system prepares one payout per doctor for everything available. Check the account names, then send.
+          PayMongo does not check bank accounts. The transfer fee comes out of the amount, so the doctor receives the “send” figure.
+        </p>
         <Select aria-label="Show" value={filter} onChange={(e) => setFilter(e.target.value)} wrapperClassName="w-48">
           <option value="open">To do</option>
           <option value="all">All, past year</option>
         </Select>
       </div>
+      {filter === 'open' && <WeeklyRun payouts={q.data ?? []} />}
       {q.isLoading ? <Loading /> : q.isError ? <LoadError q={q} what="payouts" /> : !q.data.length ? (
         <p className="rounded-[20px] border border-[#dce1e8] bg-white p-6 text-sm text-[#5f6a7c]">{filter === 'open' ? 'No payouts waiting.' : 'No payouts yet.'}</p>
       ) : filter === 'open' ? (
@@ -492,9 +543,13 @@ function FeesAndRules() {
         <label className="flex gap-3 text-sm text-[#152839]"><input type="checkbox" checked={s.manual_fallback} onChange={set('manual_fallback')} className="mt-0.5 h-4 w-4 accent-[#152839]" />
           <span><strong>Also allow QR and receipt.</strong> For when PayMongo is down. Receipts then need checking by hand again.</span></label>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Input label="Hold period (days)" type="number" min={0} max={60} value={s.hold_days} onChange={set('hold_days')} hint="Covers settlement and card disputes" />
+          <Input label="Extra hold (days)" type="number" min={0} max={60} value={s.hold_days} onChange={set('hold_days')} hint="0: payments Monday to Sunday go out the Saturday after" />
           <Input label="Smallest payout (₱)" type="number" min={1} step="0.01" value={s.min_payout} onChange={set('min_payout')} />
           <Input label="Transfer fee charged to doctors (₱)" type="number" min={0} step="0.01" value={s.payout_fee} onChange={set('payout_fee')} hint="PayMongo’s ₱10 plus VAT" />
+          {s.withholding_pct != null && (
+            <Input label="Withholding tax PayMongo takes (%)" type="number" min={0} max={5} step="0.001" value={s.withholding_pct}
+              onChange={set('withholding_pct')} hint="0.5% under RR 5-2025. Set 0 while PayMongo has you as exempt." />
+          )}
         </div>
         <Button type="submit" loading={save.isPending}>Save rules</Button>
       </form>

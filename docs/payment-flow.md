@@ -40,8 +40,16 @@ sequenceDiagram
 - **Ledger** (`ledger_entries`) is append-only. Accounts: `doctor`, `odyssey_fee`, `odyssey_sales`, `paymongo_cost`,
   `payout_fee`, `suspense`. Every balance on every screen is a sum of lines. The sum of all lines is the money that
   should be with PayMongo before ODYSSEY's own withdrawals.
-- **Hold**: a doctor's share is available after `hold_days` (default 7).
-- **Payouts**: doctor asks (`request_payout`, money leaves the balance at once) → admin sends from the admin page
+- **Weekly cycle** (migration 0018): PayMongo settles to ODYSSEY's wallet every Thursday. A doctor's share of a payment
+  made Monday to Sunday (Manila) becomes available on the Saturday after (`payout_saturday()`; `hold_days` adds extra
+  days, 0 by default). Every Saturday 08:00 Manila the Worker cron (`0 0 * * SAT` UTC) runs
+  `cron_prepare_weekly_payouts()`: one payout per doctor for everything available, at least `min_payout`. An admin checks the
+  account names and sends them (Admin → Money → Payouts → Send all ready). PayMongo does not check payout bank accounts.
+- **Withholding tax**: PayMongo withholds 0.5% of gross remittances for the BIR (RR 5-2025). When a payment is marked paid,
+  a trigger books it: the doctor bears it on their share (`withholding_tax` line on their balance), ODYSSEY on its fee and
+  on sales (`withholding_tax` account, a credit on ODYSSEY's BIR 2307). `gateway_settings.withholding_pct` is
+  admin-editable; set 0 while PayMongo has ODYSSEY as exempt (under ₱500,000 gross for the year).
+- **Payouts**: prepared on Saturday (money leaves the balance at once) → admin sends from the admin page
   (`paymongo-ops` → `POST /v2/batch_transfers` with an Idempotency-Key) → `transfer.outward.successful|failed` webhook.
   A failure, rejection or cancellation puts the money back with a new ledger line.
 - **Refunds** (admin): fees are not refunded. A prescription refunds its price from the doctor's balance; a purchase

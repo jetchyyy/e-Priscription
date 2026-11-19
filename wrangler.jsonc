@@ -16,6 +16,8 @@
   "main": "./worker/src/index.ts",
   "compatibility_date": "2025-10-01",
   "observability": { "enabled": true },
+  // Saturday 08:00 Manila (00:00 UTC): prepare the week's doctor payouts (worker/src/index.ts, scheduled()).
+  "triggers": { "crons": ["0 0 * * SAT"] },
   "assets": {
     "directory": "./client/dist",
     "binding": "ASSETS",

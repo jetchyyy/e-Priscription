@@ -9,7 +9,7 @@ import { downloadCsv, money } from '../../../lib/csv';
 import { useAuthStore } from '../../../store/authStore';
 import { feeFor, gatewayConfigQuery, paymongoOps, rateText } from '../../billing/gateway';
 import {
-  cancelPayout, earningsQuery, fetchStatement, requestPayout, setOnlinePayments, setPayoutAccount,
+  cancelPayout, earningsQuery, fetchStatement, setOnlinePayments, setPayoutAccount,
 } from '../api';
 
 const PAYOUT_STATUS = {
@@ -24,7 +24,8 @@ const PAYOUT_STATUS = {
 
 const LINE_TEXT = {
   rx_payment: 'Prescription paid',
-  payout: 'Payout requested',
+  withholding_tax: 'Tax withheld by PayMongo (BIR)',
+  payout: 'Payout',
   payout_reversal: 'Payout returned to balance',
   refund: 'Refund to patient',
   refund_reversal: 'Refund failed, returned',
@@ -216,40 +217,36 @@ function PayoutAccount({ account, locked }) {
   );
 }
 
-function RequestPayout({ balance, rules, account, open }) {
-  const qc = useQueryClient();
+/** The coming Saturday in Manila (today, if it is Saturday). */
+function nextSaturday() {
+  const manila = new Date(Date.now() + 8 * 3600_000); // read with UTC getters
+  const days = (6 - manila.getUTCDay() + 7) % 7;
+  return new Date(Date.UTC(manila.getUTCFullYear(), manila.getUTCMonth(), manila.getUTCDate() + days, 4)); // noon Manila
+}
+
+/** Payouts go out by themselves every Saturday; the doctor only keeps the account up to date. */
+function WeeklyPayout({ balance, rules, account, open }) {
   const available = Math.max(Number(balance.available), 0);
-  const [amount, setAmount] = useState('');
-  const value = amount === '' ? available : Number(amount);
   const fee = Number(rules.payout_fee);
-  const tooSmall = value < Number(rules.min_payout);
+  const saturday = formatDate(nextSaturday());
 
-  const ask = useMutation({
-    mutationFn: () => requestPayout(value),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: earningsQuery.queryKey }); setAmount(''); toast.success('Payout requested. ODYSSEY will send it soon.'); },
-    onError: (e) => toast.error(e?.message || 'Could not request the payout.'),
-  });
-
-  if (!account) return <p className="text-sm text-[#45546a]">Add your payout account first.</p>;
-  if (open) return <p className="text-sm text-[#45546a]">Your payout is in progress. You can ask for the next one once it is sent.</p>;
+  if (!account) return <p className="text-sm text-[#45546a]">Add your payout account so we can send your Saturday payouts.</p>;
+  if (open) return <p className="text-sm text-[#45546a]">This week’s payout is on its way. You can follow it in the table below.</p>;
   if (available < Number(rules.min_payout)) {
     return (
       <p className="text-sm text-[#45546a]">
-        You can ask for a payout once {formatPeso(rules.min_payout)} is available. You have {formatPeso(available)} available now.
+        Saturday payouts start once {formatPeso(rules.min_payout)} is available. You have {formatPeso(available)} available now;
+        it stays in your balance until then.
       </p>
     );
   }
-
   return (
-    <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => { e.preventDefault(); ask.mutate(); }}>
-      <Input label="Amount" type="number" inputMode="decimal" min={rules.min_payout} max={available} step="0.01"
-        value={amount === '' ? available.toFixed(2) : amount} onChange={(e) => setAmount(e.target.value)} wrapperClassName="w-44" />
-      <dl className="min-w-[220px] flex-1 space-y-1 text-sm">
-        <div className="flex justify-between gap-3"><dt className="text-[#45546a]">Transfer fee</dt><dd className="tabular-nums">−{formatPeso(fee)}</dd></div>
-        <div className="flex justify-between gap-3 font-semibold text-[#152839]"><dt>Reaches your account</dt><dd className="tabular-nums">{formatPeso(Math.max(value - fee, 0))}</dd></div>
-      </dl>
-      <Button type="submit" variant="accent" loading={ask.isPending} disabled={tooSmall || value > available}>Ask for payout</Button>
-    </form>
+    <dl className="max-w-md space-y-1 rounded-[16px] bg-[#f9f8f3] p-4 text-sm">
+      <div className="flex justify-between gap-3"><dt className="text-[#45546a]">Next payout</dt><dd className="font-semibold text-[#152839]">Saturday, {saturday}</dd></div>
+      <div className="flex justify-between gap-3"><dt className="text-[#45546a]">Available now</dt><dd className="tabular-nums">{formatPeso(available)}</dd></div>
+      <div className="flex justify-between gap-3"><dt className="text-[#45546a]">Transfer fee</dt><dd className="tabular-nums">−{formatPeso(fee)}</dd></div>
+      <div className="flex justify-between gap-3 font-semibold text-[#152839]"><dt>Reaches your account</dt><dd className="tabular-nums">{formatPeso(Math.max(available - fee, 0))}</dd></div>
+    </dl>
   );
 }
 
@@ -334,7 +331,7 @@ export default function DoctorEarnings() {
         <h1 className="font-display text-[32px] font-bold text-[#152839]">Earnings and payouts</h1>
         <p className="mt-1 max-w-2xl text-sm text-[#45546a]">
           Every peso from online payments, where it is now, and what reaches your bank.
-          Money becomes available {rules.hold_days} day{rules.hold_days === 1 ? '' : 's'} after the patient pays.
+          Payments from Monday to Sunday are paid out to your bank on the Saturday after.
         </p>
       </div>
 
@@ -346,7 +343,7 @@ export default function DoctorEarnings() {
           <Figure strong label="Available to pay out" value={balance.available}
             note={Number(balance.available) < 0 ? 'A refund is more than your available money. It comes off your next payments.' : undefined} />
           <Figure label="On hold" value={balance.on_hold}
-            note={next ? `${formatPeso(next.amount)} becomes available ${formatDate(next.at)}` : `${rules.hold_days}-day hold after each payment`} />
+            note={next ? `${formatPeso(next.amount)} goes out on Saturday, ${formatDate(next.at)}` : 'Waits for PayMongo’s Thursday settlement'} />
           <Figure label="Payout in progress" value={balance.requested} />
           <Figure label="Paid out to your bank" value={balance.paid_out}
             note={Number(balance.paid_out) ? `${formatPeso(balance.received)} received after ${formatPeso(balance.transfer_fees)} in transfer fees` : undefined} />
@@ -355,6 +352,7 @@ export default function DoctorEarnings() {
           {[
             ['Your share of all online payments', balance.earned],
             ['Refunded to patients', -Number(balance.refunded)],
+            ['Tax PayMongo withholds for the BIR, on your share', -Number(balance.tax_withheld ?? 0)],
             ['ODYSSEY fees paid by your patients', balance.fees_passed],
             ['ODYSSEY fees you covered', balance.fees_absorbed],
           ].map(([k, v]) => (
@@ -367,12 +365,13 @@ export default function DoctorEarnings() {
         <div>
           <h2 id="payout-h" className="font-display text-xl font-semibold text-[#152839]">Get paid</h2>
           <p className="mt-1 text-sm text-[#45546a]">
-            The smallest payout is {formatPeso(rules.min_payout)}. Each transfer costs {formatPeso(rules.payout_fee)}, taken from the amount.
-            ODYSSEY checks each request, then sends it.
+            Every Saturday we send everything available to your account. PayMongo pays ODYSSEY on Thursdays, so a payment made
+            Monday to Sunday goes out the Saturday after. The smallest payout is {formatPeso(rules.min_payout)}; each transfer
+            costs {formatPeso(rules.payout_fee)}, taken from the amount.
           </p>
         </div>
         <PayoutAccount account={settings.payout_account} locked={Boolean(openPayout)} />
-        <RequestPayout balance={balance} rules={rules} account={settings.payout_account} open={Boolean(openPayout)} />
+        <WeeklyPayout balance={balance} rules={rules} account={settings.payout_account} open={Boolean(openPayout)} />
       </section>
 
       <section aria-labelledby="po-h" className="space-y-3">
@@ -384,7 +383,7 @@ export default function DoctorEarnings() {
             <table className="w-full min-w-[680px] text-sm">
               <thead className="bg-[#f9f8f3] text-left text-[#45546a]">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Asked</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 text-right font-medium">Amount</th>
                   <th className="px-4 py-3 text-right font-medium">Transfer fee</th>
                   <th className="px-4 py-3 text-right font-medium">To your account</th>
