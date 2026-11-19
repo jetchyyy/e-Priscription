@@ -2,17 +2,69 @@ import { db, supabase } from '../../lib/supabase';
 import { callApi } from '../../lib/api';
 
 // ---------------------------------------------------------------------------------------------------------
-// Online payments through PayMongo. The browser never sees a PayMongo key: the Worker (/api/*, worker/src) opens checkouts,
-// send payouts and refunds, and only PayMongo's signed webhook marks anything paid.
+// Online payments through PayMongo, embedded in our pages (Payment Intents). The browser only ever holds the
+// PUBLIC key (pk_), which PayMongo made for exactly this: sending card details straight to PayMongo and checking
+// a payment's status. The Worker (/api/*, worker/src) holds the secret key and starts each payment from the database's
+// amount, and only PayMongo's signed webhook marks anything paid.
 // ---------------------------------------------------------------------------------------------------------
 
-/** Opens PayMongo's payment page for a prescription, plan, seats or pack. Resolves only if it fails. */
-export async function startCheckout(body) {
-  const { checkout_url: url } = await callApi('paymongo-checkout', body);
-  if (!url) throw new Error('Could not open the payment page. Please try again.');
-  window.location.assign(url);
-  return new Promise(() => {}); // the page is leaving
+const PAYMONGO = 'https://api.paymongo.com/v1';
+
+/**
+ * Starts a payment for a prescription, plan, seats or pack.
+ * Resolves to { intent_id, client_key, public_key, status, next_action }, or { checkout_url } for a hosted
+ * checkout opened before the switch to embedded payments.
+ */
+export const startPayment = (body) => callApi('paymongo-checkout', body);
+
+async function publicCall(start, path, { method = 'GET', body } = {}) {
+  let res;
+  try {
+    res = await fetch(`${PAYMONGO}${path}`, {
+      method,
+      headers: {
+        Authorization: `Basic ${btoa(`${start.public_key}:`)}`,
+        Accept: 'application/json',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify({ data: { attributes: body } }) : undefined,
+    });
+  } catch {
+    throw new Error('Could not reach PayMongo. Check your connection and try again.');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const first = data?.errors?.[0];
+    throw new Error(first?.detail || 'PayMongo could not process this. Please check the details and try again.');
+  }
+  return data?.data;
 }
+
+/** The payment's current state: { status, next_action, last_payment_error }. */
+export async function fetchIntent(start) {
+  const intent = await publicCall(start, `/payment_intents/${start.intent_id}?client_key=${encodeURIComponent(start.client_key)}`);
+  return intent?.attributes ?? {};
+}
+
+/** Sends the card straight to PayMongo and attaches it to the payment. Our server never sees the card number. */
+export async function payWithCard(start, card, returnUrl) {
+  const pmethod = await publicCall(start, '/payment_methods', {
+    method: 'POST',
+    body: {
+      type: 'card',
+      details: { card_number: card.number, exp_month: card.expMonth, exp_year: card.expYear, cvc: card.cvc },
+      billing: { name: card.name },
+    },
+  });
+  const intent = await publicCall(start, `/payment_intents/${start.intent_id}/attach`, {
+    method: 'POST',
+    body: { payment_method: pmethod.id, client_key: start.client_key, return_url: returnUrl },
+  });
+  return intent?.attributes ?? {};
+}
+
+/** Where PayMongo sends a finished card check or wallet pop-up: it tells this page, or goes on to `next`. */
+export const payDoneUrl = (next) => `${window.location.origin}/pay-done.html?next=${encodeURIComponent(next)}`;
 
 export const paymongoOps = (body) => callApi('paymongo-ops', body);
 
@@ -62,7 +114,7 @@ export const METHOD_HINT = {
   card: 'Philippine-issued Visa or Mastercard',
 };
 
-/** True when the page was opened by PayMongo's return link after paying. */
+/** True when the page was opened by PayMongo's return link after paying (a full-page wallet payment). */
 export const cameBackFromCheckout = () => {
   try {
     return new URLSearchParams(window.location.search).get('paid') === '1';

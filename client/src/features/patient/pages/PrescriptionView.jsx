@@ -40,8 +40,8 @@ export default function PrescriptionView() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const sawUnpaid = useRef(false);
-  // Back from PayMongo's page: the webhook usually lands within seconds; the page polls until it does.
-  const [returning] = useState(() => cameBackFromCheckout());
+  // Paid (on this page, or back from a GCash / Maya page): the webhook usually lands within seconds; the page polls until it does.
+  const [returning, setReturning] = useState(() => cameBackFromCheckout());
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     if (!returning) return undefined;
@@ -254,7 +254,8 @@ export default function PrescriptionView() {
         </div>
       )}
 
-      <PaymentQrModal open={modalOpen} onClose={() => setModalOpen(false)} rx={rx} online={online} allowManual={allowManual} />
+      <PaymentQrModal open={modalOpen} onClose={() => setModalOpen(false)} rx={rx} online={online} allowManual={allowManual}
+        onPaid={() => { setReturning(true); setModalOpen(false); }} />
     </PublicLayout>
   );
 }

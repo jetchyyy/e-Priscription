@@ -6,6 +6,12 @@
   Permissions-Policy: geolocation=(), microphone=(), payment=(), usb=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+# PayMongo's card check returns here inside our own frame (see features/billing/EmbeddedPay.jsx).
+/pay-done.html
+  ! X-Frame-Options
+  X-Frame-Options: SAMEORIGIN
+  X-Robots-Tag: noindex
+
 # Vite file names change whenever their content does, so they can be cached for a year.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

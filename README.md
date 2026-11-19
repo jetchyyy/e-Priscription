@@ -16,7 +16,7 @@ signature with **PRC / PTR / S2** numbers, generic-name note (RA 6675 / RA 9502)
 - **Client:** Vite · React 18 · Tailwind 3 · React Router 6 · TanStack Query · Zustand · React Hook Form + Zod · Lucide · qrcode.react
 - **Backend:** **Supabase** — Postgres + Row Level Security, Auth, private Storage
 - **Server code:** one **Cloudflare Worker** (`worker/src`) that serves the site and answers `/api/*`
-- **Payments:** **PayMongo** hosted checkout, signed webhooks, a permanent ledger and doctor payouts — see [docs/payment-flow.md](docs/payment-flow.md)
+- **Payments:** **PayMongo** payments embedded in the site (Payment Intents), signed webhooks, a permanent ledger and doctor payouts — see [docs/payment-flow.md](docs/payment-flow.md)
 
 ## Setup
 
@@ -36,6 +36,7 @@ npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put PAYMONGO_SECRET_KEY
+npx wrangler secret put PAYMONGO_PUBLIC_KEY
 npx wrangler secret put PAYMONGO_WEBHOOK_SECRET
 npx wrangler secret put APP_URL
 ```

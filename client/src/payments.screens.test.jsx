@@ -62,6 +62,16 @@ describe('new screens render with sample data', () => {
     expect(t).toContain('not refundable');
   });
 
+  it('patient card pay shows the card form on the page', () => {
+    const t = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <OnlinePay rx={{ id: 'x', requires_pin: false }} options={{ fee_mode: 'absorb', price: 500, methods: [{ method: 'card', label: 'Card', fee: 42.5, total: 500 }] }} />
+      </QueryClientProvider>);
+    expect(t).toContain('Card number');
+    expect(t).toContain('cc-number');
+    expect(text(t)).toContain('Pay ₱500.00 with Card');
+  });
+
   it('plan checkout renders nothing while closed (regression: reading amount of null)', () => {
     const html = wrap(<Checkout request={null} onClose={() => {}} />, (qc) => qc.setQueryData(['gateway-config'], { enabled: true, manual_fallback: true, methods }));
     expect(html).toBe('');

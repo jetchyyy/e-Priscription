@@ -7,8 +7,11 @@ SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# PayMongo dashboard -> Developers -> API Keys. Use the test key (sk_test_) until live testing is done.
+# PayMongo dashboard -> Developers -> API Keys. Use the test keys (sk_test_ / pk_test_) until live testing is done.
+# Both keys must come from the same account and the same mode.
 PAYMONGO_SECRET_KEY=sk_test_
+# The public key is handed to the browser on purpose (card details go straight to PayMongo; status checks).
+PAYMONGO_PUBLIC_KEY=pk_test_
 
 # PayMongo dashboard -> Developers -> Webhooks. Created when the webhook endpoint is registered (starts with whsk_).
 PAYMONGO_WEBHOOK_SECRET=whsk_

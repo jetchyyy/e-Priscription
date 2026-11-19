@@ -2,7 +2,7 @@
 // Static files never reach this code: wrangler.jsonc sends only /api/* here (assets.run_worker_first).
 //
 //   POST /api/register-doctor     doctor sign-up (Auth admin API)
-//   POST /api/paymongo-checkout   opens a PayMongo hosted checkout
+//   POST /api/paymongo-checkout   starts an embedded PayMongo payment (Payment Intent)
 //   POST /api/paymongo-ops        banks list, payouts, refunds, wallet balance (signed-in; the database checks roles)
 //   POST /api/payment-webhook     PayMongo's signed webhook
 import type { Env } from './env';

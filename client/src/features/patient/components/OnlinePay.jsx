@@ -1,24 +1,17 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { Button } from '../../../components/ui/Button';
 import { cn, formatPeso } from '../../../lib/utils';
-import { METHOD_HINT, startCheckout } from '../../billing/gateway';
+import { METHOD_HINT } from '../../billing/gateway';
+import { EmbeddedPay } from '../../billing/EmbeddedPay';
 
 /**
  * Pay a prescription online. The patient picks a method first, so the exact amount (and any convenience fee)
- * is on screen before PayMongo's page opens.
+ * is on screen before paying. Paying happens right here (QR, card form, or a GCash / Maya window).
  */
-export function OnlinePay({ rx, options }) {
+export function OnlinePay({ rx, options, onPaid }) {
   const methods = options.methods ?? [];
   const [method, setMethod] = useState(methods[0]?.method ?? null);
-  const [error, setError] = useState('');
   const chosen = methods.find((m) => m.method === method) ?? methods[0];
   const passFee = options.fee_mode === 'pass';
-
-  const go = useMutation({
-    mutationFn: () => startCheckout({ type: 'rx', rx_id: rx.id, method: chosen.method }),
-    onError: (e) => setError(e?.message || 'Could not open the payment page. Please try again.'),
-  });
 
   if (!chosen) return null;
 
@@ -43,7 +36,7 @@ export function OnlinePay({ rx, options }) {
                   name="pay-method"
                   value={m.method}
                   checked={m.method === chosen.method}
-                  onChange={() => { setMethod(m.method); setError(''); }}
+                  onChange={() => setMethod(m.method)}
                   className="h-4 w-4 accent-[#152839]"
                 />
                 <span>
@@ -74,16 +67,14 @@ export function OnlinePay({ rx, options }) {
         </div>
       </dl>
 
-      {error && <div role="alert" className="rounded-[16px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">{error}</div>}
-
-      <Button variant="primary" size="lg" className="w-full" loading={go.isPending} onClick={() => go.mutate()}>
-        Pay {formatPeso(chosen.total)} with {chosen.label}
-      </Button>
-      <p className="text-center text-xs text-[#5f6a7c]">
-        You finish paying on PayMongo’s secure page, then come back here. Your prescription opens by itself once the
-        payment goes through{rx.requires_pin ? ' and you enter the PIN your doctor gave you' : ''}.
-        {passFee ? ' The convenience fee is not refundable.' : ''}
-      </p>
+      <EmbeddedPay
+        body={{ type: 'rx', rx_id: rx.id }}
+        method={chosen}
+        amount={chosen.total}
+        next={`/rx/${rx.id}?paid=1`}
+        onPaid={onPaid}
+        footnote={`Your prescription opens by itself once the payment goes through${rx.requires_pin ? ' and you enter the PIN your doctor gave you' : ''}.${passFee ? ' The convenience fee is not refundable.' : ''}`}
+      />
     </section>
   );
 }

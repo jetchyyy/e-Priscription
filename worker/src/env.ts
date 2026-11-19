@@ -7,6 +7,7 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   APP_URL?: string;
+  PAYMONGO_PUBLIC_KEY?: string; // pk_test_ / pk_live_: sent to the browser for card details and status checks
 
   // Secrets
   SUPABASE_SERVICE_ROLE_KEY: string;

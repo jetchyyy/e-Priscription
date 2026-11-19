@@ -1,17 +1,27 @@
 // POST /api/paymongo-checkout
 //
-// Opens a PayMongo hosted checkout and returns its URL. The amount always comes from the database, never the browser.
+// Starts an embedded PayMongo payment (Payment Intent) and returns what the page needs to finish it on our site.
+// The amount always comes from the database, never the browser.
 //   Patient:  { "type": "rx", "rx_id": "<21 chars>", "method": "qrph" }                       (no login needed)
 //   Doctor:   { "type": "plan", "plan_id": "solo", "period": "monthly", "seats": 0, "method": "qrph" }
 //             { "type": "seats", "seats": 2, "method": "qrph" }
 //             { "type": "pack", "pack_id": "pack-25", "quantity": 1, "method": "qrph" }   (doctor's login required)
-// Nothing is marked paid here. That happens only when PayMongo's signed webhook arrives.
+// Answer: { intent_id, client_key, public_key, status, next_action }
+//   qrph:           next_action.code.image_url is the QR to show
+//   gcash/paymaya:  next_action.redirect.url is the wallet's approval page (opened in a pop-up)
+//   card:           nothing attached yet; the browser sends the card straight to PayMongo with the public key
+//                   (card numbers never reach this server), then attaches it with client_key.
+// Nothing is marked paid here. That happens only when PayMongo's signed webhook (payment.paid) arrives.
 import type { Env } from '../env';
 import { json, readJson } from '../http';
 import { appUrl, centavos, friendly, pm } from '../paymongo';
 import { serviceClient, userClient } from '../supabase';
 
 const METHODS = ['qrph', 'gcash', 'paymaya', 'card'];
+const FAILED = 'Could not start the payment. Please try again in a moment.';
+
+/** public/pay-done.html tells our page the step is done, or sends a full-page visitor on to `next`. */
+const doneUrl = (env: Env, next: string) => `${appUrl(env)}/pay-done.html?next=${encodeURIComponent(next)}`;
 
 type Body = {
   type?: string; method?: string; rx_id?: string; plan_id?: string; period?: string;
@@ -19,7 +29,7 @@ type Body = {
 };
 
 export async function paymongoCheckout(req: Request, env: Env): Promise<Response> {
-  if (!env.PAYMONGO_SECRET_KEY) return json({ error: 'Online payment is not set up yet' }, 503);
+  if (!env.PAYMONGO_SECRET_KEY || !env.PAYMONGO_PUBLIC_KEY) return json({ error: 'Online payment is not set up yet' }, 503);
 
   const body: Body | null = await readJson<any>(req);
   if (!body?.type || !body.method || !METHODS.includes(body.method)) {
@@ -30,13 +40,13 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
   let payment: { id: string; reference: string };
   let lineItems: { name: string; amount: number; currency: 'PHP'; quantity: 1; description?: string }[];
   let description: string;
-  let successUrl: string;
-  let cancelUrl: string;
+  let returnUrl: string; // where PayMongo sends the wallet pop-up or card check when it is done
 
   if (body.type === 'rx') {
     if (!/^[A-Za-z0-9_-]{21}$/.test(body.rx_id ?? '')) return json({ error: 'Prescription not found' }, 404);
     const { data, error } = await admin.rpc('gateway_prepare_rx', { p_id: body.rx_id, p_method: body.method });
     if (error) return json({ error: friendly(error) }, error.code === 'P0002' ? 404 : 400);
+    // A hosted checkout opened before the switch to embedded payments: send the patient there.
     if (data.reused) return json({ checkout_url: data.checkout_url });
 
     payment = data;
@@ -47,8 +57,7 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
                        description: 'Online payment fee. Not refundable.' });
     }
     description = `Prescription ${data.prescription_id}`;
-    successUrl = `${appUrl(env)}/rx/${body.rx_id}?paid=1`;
-    cancelUrl = `${appUrl(env)}/rx/${body.rx_id}`;
+    returnUrl = doneUrl(env, `/rx/${body.rx_id}?paid=1`);
   } else if (['plan', 'seats', 'pack'].includes(body.type)) {
     const user = userClient(env, req);
     if (!user) return json({ error: 'Sign in again to continue' }, 401);
@@ -65,42 +74,69 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
     payment = data;
     lineItems = [{ name: data.title, amount: centavos(data.total), currency: 'PHP', quantity: 1 }];
     description = `ODYSSEY E-Prescription: ${data.title}`;
-    successUrl = `${appUrl(env)}/doctor/plan?paid=1`;
-    cancelUrl = `${appUrl(env)}/doctor/plan`;
+    returnUrl = doneUrl(env, '/doctor/plan?paid=1');
   } else {
     return json({ error: 'Choose what to pay for' }, 400);
   }
 
-  const res = await pm(env, '/v1/checkout_sessions', {
+  const amount = lineItems.reduce((sum, li) => sum + li.amount, 0);
+  const created = await pm(env, '/v1/payment_intents', {
     method: 'POST',
+    idempotencyKey: `pi-${payment.id}`,
     body: {
       data: {
         attributes: {
-          line_items: lineItems,
-          payment_method_types: [body.method],
-          reference_number: payment.reference,
-          description,
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-          send_email_receipt: false,
-          show_line_items: true,
-          metadata: { gateway_payment_id: payment.id, kind: body.type },
+          amount,
+          currency: 'PHP',
+          capture_type: 'automatic',
+          payment_method_allowed: [body.method],
+          ...(body.method === 'card' ? { payment_method_options: { card: { request_three_d_secure: 'any' } } } : {}),
+          description: `${description} (${payment.reference})`,
+          metadata: { gateway_payment_id: payment.id, reference: payment.reference, kind: body.type },
         },
       },
     },
   });
-  if (!res.ok) {
-    console.error('checkout_sessions failed:', res.status, res.code, res.error);
-    return json({ error: 'Could not open the payment page. Please try again in a moment.' }, 502);
+  const intent = created.data?.data;
+  if (!created.ok || !intent?.id) {
+    console.error('payment_intents failed:', created.status, created.code, created.error);
+    return json({ error: FAILED }, 502);
   }
 
-  const session = res.data?.data;
-  const url = session?.attributes?.checkout_url;
-  if (!url) return json({ error: 'Could not open the payment page. Please try again in a moment.' }, 502);
+  // The webhook finds the payment by this intent id (stored where the hosted checkout id used to go).
   const { error: attachError } = await admin.rpc('gateway_attach_session', {
-    p_id: payment.id, p_session: session.id, p_url: url, p_livemode: Boolean(session.attributes?.livemode),
+    p_id: payment.id, p_session: intent.id, p_url: null, p_livemode: Boolean(intent.attributes?.livemode),
   });
-  if (attachError) console.error('gateway_attach_session failed:', attachError.message); // the webhook still finds it by reference
+  if (attachError) {
+    console.error('gateway_attach_session failed:', attachError.message);
+    return json({ error: FAILED }, 502); // without it the webhook could not match the payment
+  }
 
-  return json({ checkout_url: url });
+  const answer = {
+    intent_id: intent.id,
+    client_key: intent.attributes?.client_key,
+    public_key: env.PAYMONGO_PUBLIC_KEY,
+    status: intent.attributes?.status,
+    next_action: null as unknown,
+  };
+  if (body.method === 'card') return json(answer);
+
+  // QR Ph and e-wallets carry no card data, so the server creates and attaches the method itself.
+  const method = await pm(env, '/v1/payment_methods', { method: 'POST', body: { data: { attributes: { type: body.method } } } });
+  const methodId = method.data?.data?.id;
+  if (!method.ok || !methodId) {
+    console.error('payment_methods failed:', method.status, method.code, method.error);
+    return json({ error: FAILED }, 502);
+  }
+  const attached = await pm(env, `/v1/payment_intents/${intent.id}/attach`, {
+    method: 'POST',
+    body: { data: { attributes: { payment_method: methodId, return_url: returnUrl } } },
+  });
+  if (!attached.ok) {
+    console.error('payment_intents attach failed:', attached.status, attached.code, attached.error);
+    return json({ error: FAILED }, 502);
+  }
+  answer.status = attached.data?.data?.attributes?.status;
+  answer.next_action = attached.data?.data?.attributes?.next_action ?? null;
+  return json(answer);
 }

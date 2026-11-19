@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Payment step done</title>
+  <style>body{margin:0;padding:24px;font:16px system-ui,sans-serif;color:#152839;background:#f9f8f3}</style>
+</head>
+<body>
+  <p>Done. You can close this window and go back to ODYSSEY.</p>
+  <script>
+    // PayMongo sends a finished card check (shown in a frame) or GCash / Maya window (a pop-up) here.
+    // Tell the page that opened it, then get out of the way. A full-page visitor goes on to `next` (our own paths only).
+    (function () {
+      var host = window.opener || (window.parent !== window ? window.parent : null);
+      if (host) {
+        try { host.postMessage('paymongo-done', location.origin); } catch (e) {}
+        if (window.opener) window.close();
+        return;
+      }
+      var next = new URLSearchParams(location.search).get('next') || '/';
+      if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.charAt(1) === '\\') next = '/';
+      location.replace(next);
+    })();
+  </script>
+</body>
+</html>

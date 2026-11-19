@@ -325,7 +325,7 @@ export default function DoctorPlan() {
 
       <Packs owner={role === 'owner'} pending={pending} onBuy={buyPack} />
 
-      <Checkout request={checkout} onClose={() => setCheckout(null)} />
+      <Checkout request={checkout} onClose={() => setCheckout(null)} onPaid={() => setReturning(true)} />
     </div>
   );
 }

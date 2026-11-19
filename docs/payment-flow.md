@@ -3,24 +3,33 @@
 ODYSSEY collects online payments through its own PayMongo account, as the doctors' collecting agent.
 Migration `0010_paymongo_gateway.sql` holds all the rules; the Cloudflare Worker (`worker/src`, `/api/*`) only talks to PayMongo.
 
+Payments happen on our own pages (PayMongo Payment Intents), not on PayMongo's hosted checkout page:
+QR Ph shows the QR in the page, cards use a card form in the page (card details go from the browser straight to
+PayMongo with the public key; the bank's 3-D Secure check opens in a frame), and GCash / Maya open their approval
+page in a small window over ours (a full-page redirect if the browser blocks it). `public/pay-done.html` is the
+return page for the frame and the window.
+
 ```mermaid
 sequenceDiagram
   participant P as Patient browser
   participant DB as Supabase (RPC)
-  participant C as paymongo-checkout (Edge Fn)
+  participant C as /api/paymongo-checkout (Worker)
   participant PM as PayMongo
-  participant W as payment-webhook (Edge Fn)
+  participant W as /api/payment-webhook (Worker)
 
   P->>DB: rx_online_options(id) → methods with exact amounts
   P->>C: {type:'rx', rx_id, method}
   C->>DB: gateway_prepare_rx(id, method) [service_role] → amounts, reference
-  C->>PM: POST /v1/checkout_sessions (line items, reference_number)
-  C-->>P: checkout_url → patient pays on PayMongo
-  PM->>W: checkout_session.payment.paid + Paymongo-Signature
-  W->>DB: gateway_handle_event(event) [service_role]: rx paid + ledger lines
-  loop every 3 s while unpaid
-    P->>DB: get_public_rx(id)
+  C->>PM: POST /v1/payment_intents (amount, metadata.reference)
+  C->>DB: gateway_attach_session(id, intent_id)
+  C->>PM: qrph/gcash/paymaya: POST /v1/payment_methods + /attach
+  C-->>P: intent_id, client_key, public_key, next_action (QR image or wallet URL)
+  P->>PM: card only: POST /v1/payment_methods + /attach with the public key
+  loop every 3 s
+    P->>PM: GET /v1/payment_intents/:id?client_key (public key)
   end
+  PM->>W: payment.paid + Paymongo-Signature
+  W->>DB: gateway_handle_event(event) [service_role]: rx paid + ledger lines
 ```
 
 ## Money rules
@@ -42,11 +51,14 @@ sequenceDiagram
 
 ## PayMongo webhook
 URL: `https://<your-site>/api/payment-webhook` (one per mode: test and live).
-Events: `checkout_session.payment.paid`, `payment.failed`, `payment.refunded`, `payment.refund.updated`,
+The Worker passes `payment.paid` on as `checkout_session.payment.paid`, matched by the intent id that
+`gateway_attach_session` stored, so the database rules did not change. `checkout_session.payment.paid` is still
+understood for hosted checkouts opened before the switch.
+Events: `payment.paid`, `payment.failed`, `payment.refunded`, `payment.refund.updated`,
 `transfer.outward.successful`, `transfer.outward.failed`, `payout.deposited`, `payout.returned`.
 
 ## Secrets (Worker secrets via `wrangler secret put`, `.dev.vars` locally; never in `client/.env`)
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `APP_URL`, and optionally
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_PUBLIC_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `APP_URL`, and optionally
 `PAYMONGO_SOURCE_ACCOUNT_NUMBER|NAME|BIC` (the wallet payouts are sent from; otherwise read from `GET /v2/wallets`).
 
 ## Manual fallback

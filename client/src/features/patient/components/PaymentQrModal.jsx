@@ -55,7 +55,7 @@ function WaitingForDoctor({ rx, onClose }) {
   );
 }
 
-export function PaymentQrModal({ open, onClose, rx, online = null, allowManual = true }) {
+export function PaymentQrModal({ open, onClose, rx, online = null, allowManual = true, onPaid }) {
   const qc = useQueryClient();
   const methods = rx.payment_methods ?? [];
   const [methodId, setMethodId] = useState(() => methods[0]?.id ?? null);
@@ -290,7 +290,7 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
         <WaitingForDoctor rx={rx} onClose={onClose} />
       ) : hasOnline ? (
         <div className="space-y-7">
-          <OnlinePay rx={rx} options={online} />
+          <OnlinePay rx={rx} options={online} onPaid={onPaid} />
           {allowManual && methods.length > 0 && (
             showManual ? (
               <div className="space-y-4 border-t border-[#dce1e8] pt-6">
