@@ -13,6 +13,10 @@ supabase/functions/.env
 # Cloudflare
 .wrangler/
 
-showreel.dev.vars
+.dev.vars
 .dev.vars.*
 !.dev.vars.example
+
+# Local marketing work (not part of the app; the app's own client/src/features/marketing stays tracked)
+/marketing/
+/showreel/
