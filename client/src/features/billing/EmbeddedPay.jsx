@@ -1,10 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, Download, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { formatPeso } from '../../lib/utils';
 import { fetchIntent, payDoneUrl, payWithCard, startPayment } from './gateway';
 
 const POLL_MS = 3000;
+const QR_LIFETIME_MS = 30 * 60_000; // PayMongo's QR Ph codes expire after 30 minutes
+
+const mmss = (ms) => {
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+
+/** Saves the QR as a PNG, so a phone user can upload it in GCash, Maya or their bank app. */
+async function downloadQr(src, name) {
+  let href = src;
+  let made = false;
+  if (!src.startsWith('data:')) {
+    try {
+      href = URL.createObjectURL(await (await fetch(src)).blob());
+      made = true;
+    } catch {
+      window.open(src, '_blank', 'noopener'); // could not fetch it: open it so it can be saved by hand
+      return;
+    }
+  }
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  if (made) setTimeout(() => URL.revokeObjectURL(href), 10_000);
+}
+
+/** Time left on the QR, ticking every second. */
+function useCountdown(until) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!until) return undefined;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [until]);
+  return until ? until - now : null;
+}
 const WALLETS = ['gcash', 'paymaya'];
 
 const field =
@@ -40,6 +80,10 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
   const [stage, setStage] = useState('idle'); // idle | starting | qr | wallet | check | waiting | paid
   const [start, setStart] = useState(null);
   const [qr, setQr] = useState('');
+  const [qrUntil, setQrUntil] = useState(0);
+  const qrRef = useRef('');
+  const left = useCountdown(stage === 'qr' ? qrUntil : 0);
+  const expired = left != null && left <= 0;
   const [checkUrl, setCheckUrl] = useState('');
   const [error, setError] = useState('');
   const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' });
@@ -57,6 +101,8 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
     setStage('idle');
     setStart(null);
     setQr('');
+    qrRef.current = '';
+    setQrUntil(0);
     setCheckUrl('');
     setError(message);
   };
@@ -78,7 +124,15 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
     if (status === 'awaiting_payment_method') { reset(failedText(attrs)); return; }
     if (status === 'awaiting_next_action') {
       const na = attrs.next_action ?? {};
-      if (na.code?.image_url) { setQr(na.code.image_url); setStage('qr'); return; }
+      if (na.code?.image_url) {
+        if (qrRef.current !== na.code.image_url) { // a new QR: its 30 minutes start now
+          qrRef.current = na.code.image_url;
+          setQr(na.code.image_url);
+          setQrUntil(Date.now() + QR_LIFETIME_MS);
+        }
+        setStage('qr');
+        return;
+      }
       const url = na.redirect?.url;
       if (!url) return;
       if (isCard) { setCheckUrl(url); setStage('check'); return; }
@@ -153,13 +207,30 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
     return (
       <div className="space-y-4">
         <div className="rounded-[22px] bg-[#f9f8f3] p-5 text-center">
-          <div className="mx-auto w-fit rounded-[18px] bg-white p-3">
+          <div className={`relative mx-auto w-fit rounded-[18px] bg-white p-3 ${expired ? 'opacity-30' : ''}`}>
             <img src={qr} alt={`QR Ph code for ${formatPeso(amount)}`} className="h-60 w-60 object-contain" />
           </div>
           <p className="mt-4 font-display text-xl font-bold tabular-nums text-[#152839]">{formatPeso(amount)}</p>
-          <p className="mt-1 text-sm text-[#45546a]">
-            Scan with GCash, Maya or your bank app. On a phone, take a screenshot and upload it in your app.
-          </p>
+          {expired ? (
+            <div role="alert" className="mt-3 space-y-3">
+              <p className="font-semibold text-[#7a2406]">This QR has expired.</p>
+              <Button variant="primary" className="w-full" onClick={() => pay()}>Get a new QR</Button>
+            </div>
+          ) : (
+            <>
+              <p className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold tabular-nums ${
+                left < 5 * 60_000 ? 'bg-[#fbe9e1] text-[#7a2406]' : 'bg-[#ece7de] text-[#152839]'}`}
+                aria-live={left < 60_000 ? 'polite' : 'off'}>
+                <Clock className="h-4 w-4" aria-hidden="true" /> Pay within {mmss(left)}
+              </p>
+              <p className="mt-2 text-sm text-[#45546a]">
+                Scan with GCash, Maya or your bank app. Paying on this phone? Download the QR, then upload it in your app’s Scan to Pay.
+              </p>
+              <Button variant="secondary" className="mt-3 w-full" onClick={() => downloadQr(qr, `odyssey-qr-${formatPeso(amount).replace(/[^\d.]/g, '')}.png`)}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Download QR
+              </Button>
+            </>
+          )}
         </div>
         {start && start.livemode === false && (
           <div className="rounded-[16px] border border-dashed border-[#b8470a] bg-[#fff6ef] p-4 text-sm text-[#7a2406]">
@@ -175,11 +246,13 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
             <p className="mt-2 text-xs">This page updates by itself once PayMongo reports the payment.</p>
           </div>
         )}
-        <p className="flex items-center justify-center gap-2 text-sm text-[#45546a]" role="status">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Waiting for your payment…
-        </p>
+        {!expired && (
+          <p className="flex items-center justify-center gap-2 text-sm text-[#45546a]" role="status">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Waiting for your payment…
+          </p>
+        )}
         <p className="text-center text-xs text-[#5f6a7c]">
-          The QR works for 30 minutes and only once.{' '}
+          Each QR works once.{' '}
           <button type="button" className="font-semibold text-[#b8470a] hover:underline" onClick={() => reset()}>Choose another way to pay</button>
         </p>
       </div>
