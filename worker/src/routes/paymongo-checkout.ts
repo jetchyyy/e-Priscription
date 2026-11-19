@@ -20,6 +20,17 @@ import { serviceClient, userClient } from '../supabase';
 const METHODS = ['qrph', 'gcash', 'paymaya', 'card'];
 const FAILED = 'Could not start the payment. Please try again in a moment.';
 
+/** PayMongo's test-mode simulation link (a `test_url` field somewhere in the answer). Only https links are passed on. */
+function findTestUrl(node: unknown, depth = 0): string | null {
+  if (!node || typeof node !== 'object' || depth > 6) return null;
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (typeof v === 'string' && /test_?url/i.test(k) && /^https:\/\//.test(v)) return v;
+    const found = findTestUrl(v, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 /** public/pay-done.html tells our page the step is done, or sends a full-page visitor on to `next`. */
 const doneUrl = (env: Env, next: string) => `${appUrl(env)}/pay-done.html?next=${encodeURIComponent(next)}`;
 
@@ -118,6 +129,8 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
     public_key: env.PAYMONGO_PUBLIC_KEY,
     status: intent.attributes?.status,
     next_action: null as unknown,
+    livemode: Boolean(intent.attributes?.livemode),
+    test_url: null as string | null, // test keys only: PayMongo's link that simulates paying the QR
   };
   if (body.method === 'card') return json(answer);
 
@@ -138,5 +151,6 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
   }
   answer.status = attached.data?.data?.attributes?.status;
   answer.next_action = attached.data?.data?.attributes?.next_action ?? null;
+  if (!answer.livemode) answer.test_url = findTestUrl(attached.data);
   return json(answer);
 }

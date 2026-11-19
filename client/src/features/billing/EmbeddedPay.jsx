@@ -161,6 +161,20 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
             Scan with GCash, Maya or your bank app. On a phone, take a screenshot and upload it in your app.
           </p>
         </div>
+        {start && start.livemode === false && (
+          <div className="rounded-[16px] border border-dashed border-[#b8470a] bg-[#fff6ef] p-4 text-sm text-[#7a2406]">
+            <p className="font-semibold">Test mode. Do not scan this QR with a real app.</p>
+            {start.test_url ? (
+              <a href={start.test_url} target="_blank" rel="noreferrer"
+                className="mt-2 inline-flex min-h-[40px] items-center rounded-full bg-[#b8470a] px-4 font-semibold text-white hover:opacity-90">
+                Simulate the payment
+              </a>
+            ) : (
+              <p className="mt-1">PayMongo sent no simulation link with this QR.</p>
+            )}
+            <p className="mt-2 text-xs">This page updates by itself once PayMongo reports the payment.</p>
+          </div>
+        )}
         <p className="flex items-center justify-center gap-2 text-sm text-[#45546a]" role="status">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Waiting for your payment…
         </p>
