@@ -3,6 +3,7 @@
 //
 //   POST /api/register-doctor     doctor sign-up (Auth admin API)
 //   POST /api/paymongo-checkout   starts an embedded PayMongo payment (Payment Intent)
+//   POST /api/paymongo-confirm    asks PayMongo whether a payment is paid (when the webhook is late)
 //   POST /api/paymongo-ops        banks list, payouts, refunds, wallet balance (signed-in; the database checks roles)
 //   POST /api/payment-webhook     PayMongo's signed webhook
 //   cron  every 15 minutes        digital tax from PayMongo's payouts; Saturday doctor payouts (cron.ts)
@@ -12,11 +13,13 @@ import { paymentWebhook } from './routes/payment-webhook';
 import { paymongoCheckout } from './routes/paymongo-checkout';
 import { paymongoOps } from './routes/paymongo-ops';
 import { registerDoctor } from './routes/register-doctor';
+import { paymongoConfirm } from './confirm';
 import { runScheduled } from './cron';
 
 const ROUTES: Record<string, (req: Request, env: Env) => Promise<Response>> = {
   '/api/register-doctor': registerDoctor,
   '/api/paymongo-checkout': paymongoCheckout,
+  '/api/paymongo-confirm': paymongoConfirm,
   '/api/paymongo-ops': paymongoOps,
   '/api/payment-webhook': paymentWebhook,
 };

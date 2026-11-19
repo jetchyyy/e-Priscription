@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Clock, Download, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { formatPeso } from '../../lib/utils';
-import { fetchIntent, payDoneUrl, payWithCard, startPayment } from './gateway';
+import { confirmPayment, fetchIntent, payDoneUrl, payWithCard, startPayment } from './gateway';
 
 const POLL_MS = 3000;
 const QR_LIFETIME_MS = 30 * 60_000; // PayMongo's QR Ph codes expire after 30 minutes
@@ -79,6 +79,8 @@ const failedText = (attrs) =>
 export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
   const [stage, setStage] = useState('idle'); // idle | starting | qr | wallet | check | waiting | paid
   const [start, setStart] = useState(null);
+  const startRef = useRef(null);
+  startRef.current = start;
   const [qr, setQr] = useState('');
   const [qrUntil, setQrUntil] = useState(0);
   const qrRef = useRef('');
@@ -117,7 +119,11 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
     if (status === 'succeeded') {
       try { popup.current?.close(); } catch (_) { /* gone */ }
       setStage('paid');
-      if (!paidOnce.current) { paidOnce.current = true; onPaidRef.current?.(); }
+      if (!paidOnce.current) {
+        paidOnce.current = true;
+        if (startRef.current) confirmPayment(startRef.current); // settles it now if the webhook is late
+        onPaidRef.current?.();
+      }
       return;
     }
     if (status === 'processing') { setStage('waiting'); return; }
@@ -179,6 +185,7 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
       const s = await startPayment({ ...body, method: method.method });
       if (s.checkout_url) { try { popup.current?.close(); } catch (_) { /* gone */ } window.location.assign(s.checkout_url); return; }
       setStart(s);
+      startRef.current = s;
       const attrs = isCard ? await payWithCard(s, parsed.card, payDoneUrl(next)) : s;
       follow(attrs);
     } catch (err) {

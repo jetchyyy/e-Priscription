@@ -1,10 +1,12 @@
 // The Worker's 15-minute job (wrangler.jsonc triggers.crons). Each step runs on its own, so one failing does not
 // stop the others, and every step is safe to repeat: a missed or doubled tick changes nothing.
+//   0. Confirms open payments with PayMongo directly, in case a webhook was missed (confirm.ts).
 //   1. Records what PayMongo kept from its recent payouts to ODYSSEY's wallet (the digital tax).
 //   2. From Saturday 00:00 Manila, for 72 hours: prepares each doctor's weekly payout (the database does nothing
 //      outside that window or for a doctor already paid this week).
 //   3. Sends prepared weekly payouts whose account name matches the verified doctor, while the wallet covers them.
 //      The rest wait in Admin -> Money -> Payouts.
+import { confirmOpenPayments } from './confirm';
 import type { Env } from './env';
 import { pm } from './paymongo';
 import {
@@ -78,12 +80,13 @@ export async function runScheduled(env: Env): Promise<void> {
   const step = async (name: string, fn: () => Promise<unknown>) => {
     try {
       const r: any = await fn();
-      if (r && (r.recorded || r.created || r.sent || r.postponed)) console.log(name, JSON.stringify(r));
+      if (r && (r.confirmed || r.recorded || r.created || r.sent || r.postponed)) console.log(name, JSON.stringify(r));
     } catch (e) {
       failures.push(`${name}: ${(e as Error).message}`);
     }
   };
 
+  await step('confirm', () => confirmOpenPayments(env, db));
   await step('deductions', () => syncPayoutDeductions(env, db));
   await step('prepare', async () => {
     const { data, error } = await db.rpc('cron_prepare_weekly_payouts');
