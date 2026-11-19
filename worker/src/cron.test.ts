@@ -1,6 +1,6 @@
 // Run: npm run test:worker
 import { describe, expect, it } from 'vitest';
-import { sendWeeklyPayouts, syncPayoutDeductions } from './cron';
+import { checkTransfers, sendWeeklyPayouts, syncPayoutDeductions } from './cron';
 import { payoutDetails } from './payouts';
 
 const env = { PAYMONGO_SECRET_KEY: 'sk_test_x' } as any;
@@ -61,5 +61,26 @@ describe('sendWeeklyPayouts', () => {
     const err = console.error; console.error = () => {};
     try { await sendWeeklyPayouts(env, db, async () => 50_000); } finally { console.error = err; } // ₱500 in the wallet
     expect(db.calls.filter((c: any) => c.name === 'cron_begin_payout').map((c: any) => c.args.p_id)).toEqual(['small']);
+  });
+});
+
+describe('checkTransfers', () => {
+  it('records final answers only', async () => {
+    const db = fakeDb({
+      cron_transfers_to_check: [
+        { kind: 'payout', id: 'p1', transfer_id: 'tr_done' },
+        { kind: 'withdrawal', id: 'w1', transfer_id: 'tr_wait' },
+        { kind: 'withdrawal', id: 'w2', transfer_id: 'tr_failed' },
+      ],
+      cron_transfer_result: 'payout_sent',
+    });
+    const status = async (_env: any, id: string) => ({
+      tr_done: { status: 'succeeded', detail: null, providerRef: 'IP123', fee: 10 },
+      tr_wait: { status: 'pending', detail: null, providerRef: null, fee: null },
+      tr_failed: { status: 'failed', detail: 'Account closed', providerRef: null, fee: null },
+    } as any)[id];
+    expect(await checkTransfers(env, db, status)).toEqual({ finished: 2 });
+    const calls = db.calls.filter((c: any) => c.name === 'cron_transfer_result').map((c: any) => [c.args.p_kind, c.args.p_id, c.args.p_status]);
+    expect(calls).toEqual([['payout', 'p1', 'succeeded'], ['withdrawal', 'w2', 'failed']]);
   });
 });

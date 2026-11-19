@@ -4,10 +4,11 @@
 //   { "action": "send_payout", "payout_id": "<uuid>" }    admin: sends an approved payout through PayMongo
 //   { "action": "refund", "payment_id": "<uuid>", "reason": "others", "notes": "..." }   admin
 //   { "action": "wallet" }                                admin: PayMongo wallet balance, for the balance check
+//   { "action": "withdraw", "amount": 1000, "note": "..." }  admin: ODYSSEY's own revenue to ODYSSEY's account
 import type { Env } from '../env';
 import { json, readJson } from '../http';
 import { QRPH_REFUNDS_API, centavos, friendly, pm } from '../paymongo';
-import { sendClaimedPayout } from '../payouts';
+import { sendClaimedPayout, sendTransfer, walletAvailableCentavos } from '../payouts';
 import { getUser, serviceClient, userClient } from '../supabase';
 
 const bankCache = new Map<string, { at: number; list: { code: string; name: string }[] }>();
@@ -67,6 +68,31 @@ export async function paymongoOps(req: Request, env: Env): Promise<Response> {
     if (outcome === 'rejected') return json({ error: `PayMongo did not accept the transfer: ${detail ?? 'unknown reason'}. The money is back in the doctor’s balance.` }, 400);
     if (outcome === 'unknown') return json({ error: 'PayMongo did not give a clear answer. Check the transfer in the PayMongo dashboard before trying again.' }, 502);
     return json({ ok: true, status: outcome });
+  }
+
+  if (action === 'withdraw') {
+    // Doctors' money stays in the wallet: only what the wallet holds beyond their balances, payouts being sent
+    // and money held aside can leave. admin_money_overview also checks that the caller is an admin.
+    const { data: o, error: oe } = await user.rpc('admin_money_overview');
+    if (oe) return json({ error: friendly(oe, 'Not authorized') }, oe.code === '42501' ? 403 : 400);
+    const wallet = await walletAvailableCentavos(env);
+    if (wallet == null) return json({ error: 'Could not read the PayMongo Wallet balance, so nothing was sent.' }, 502);
+    const mustKeep = Number(o.owed_to_doctors) + Number(o.payouts_requested) + Math.max(Number(o.suspense), 0);
+    const cap = Math.floor(wallet - Math.round(mustKeep * 100)) / 100;
+
+    const { data: w, error } = await user.rpc('admin_begin_withdrawal', {
+      p_amount: Number(body.amount), p_wallet_cap: cap, p_note: typeof body.note === 'string' ? body.note : null,
+    });
+    if (error) return json({ error: friendly(error) }, error.code === '42501' ? 403 : 400);
+
+    const r = await sendTransfer(env, 'withdrawal', w);
+    const { error: e2 } = await serviceClient(env).rpc('gateway_withdrawal_result', {
+      p_id: w.id, p_outcome: r.outcome, p_transfer_id: r.transferId, p_fee: r.fee, p_detail: r.detail,
+    });
+    if (e2) console.error('gateway_withdrawal_result failed:', e2.message);
+    if (r.outcome === 'rejected') return json({ error: `PayMongo did not accept the transfer: ${r.detail ?? 'unknown reason'}. Nothing was taken out.` }, 400);
+    if (r.outcome === 'unknown') return json({ error: 'PayMongo did not give a clear answer. Check the transfer in the PayMongo dashboard before trying again.' }, 502);
+    return json({ ok: true, status: r.outcome });
   }
 
   if (action === 'refund') {

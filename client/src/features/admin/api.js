@@ -322,6 +322,12 @@ export const recordDeduction = ({ kind, amount, occurredAt, payoutId, reference,
 export const removeDeduction = (id) => rpc('admin_remove_deduction', { p_id: id });
 export const fetchRevenueByDay = (days) => rpc('admin_revenue_by_day', { p_days: days });
 
+/** ODYSSEY's own payout account and revenue withdrawals (migration 0022). Sending goes through paymongoOps('withdraw'). */
+export const fetchOdysseyWithdrawals = () => rpc('admin_odyssey_withdrawals');
+export const setOdysseyPayoutAccount = ({ provider, bankCode, bankName, accountName, accountNumber }) => rpc('admin_set_odyssey_payout_account', {
+  p_provider: provider, p_bank_code: bankCode, p_bank_name: bankName, p_account_name: accountName, p_account_number: accountNumber,
+});
+
 /** Creates this week's payouts now (the Saturday cron does the same). Returns { created, total, below_minimum }. */
 export const prepareWeeklyPayouts = () => rpc('admin_prepare_weekly_payouts');
 

@@ -6,11 +6,12 @@
 //      outside that window or for a doctor already paid this week).
 //   3. Sends prepared weekly payouts whose account name matches the verified doctor, while the wallet covers them.
 //      The rest wait in Admin -> Money -> Payouts.
+//   4. Asks PayMongo about transfers whose result never arrived (doctor payouts, ODYSSEY withdrawals).
 import { confirmOpenPayments } from './confirm';
 import type { Env } from './env';
 import { pm } from './paymongo';
 import {
-  MAX_DEDUCTION_SHARE, SKIPPED_PAYOUT_STATUSES, payoutDetails, sendClaimedPayout, walletAvailableCentavos,
+  MAX_DEDUCTION_SHARE, SKIPPED_PAYOUT_STATUSES, payoutDetails, sendClaimedPayout, transferStatus, walletAvailableCentavos,
   type ClaimedPayout,
 } from './payouts';
 import { serviceClient, type Db } from './supabase';
@@ -73,6 +74,22 @@ export async function sendWeeklyPayouts(env: Env, db: Db, wallet = walletAvailab
   return { sent, postponed };
 }
 
+export async function checkTransfers(env: Env, db: Db, status = transferStatus) {
+  const { data, error } = await db.rpc<{ kind: string; id: string; transfer_id: string }[]>('cron_transfers_to_check');
+  if (error) throw new Error(`cron_transfers_to_check failed: ${error.message}`);
+  let finished = 0;
+  for (const t of data ?? []) {
+    const s = await status(env, t.transfer_id);
+    if (!s || !['succeeded', 'failed'].includes(s.status)) continue;
+    const { data: r, error: e } = await db.rpc('cron_transfer_result', {
+      p_kind: t.kind, p_id: t.id, p_status: s.status, p_detail: s.detail, p_provider_ref: s.providerRef, p_fee: s.fee,
+    });
+    if (e) throw new Error(`cron_transfer_result failed: ${e.message}`);
+    if (r && r !== 'already') finished += 1;
+  }
+  return { finished };
+}
+
 export async function runScheduled(env: Env): Promise<void> {
   if (!env.PAYMONGO_SECRET_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) return;
   const db = serviceClient(env);
@@ -80,7 +97,7 @@ export async function runScheduled(env: Env): Promise<void> {
   const step = async (name: string, fn: () => Promise<unknown>) => {
     try {
       const r: any = await fn();
-      if (r && (r.confirmed || r.recorded || r.created || r.sent || r.postponed)) console.log(name, JSON.stringify(r));
+      if (r && (r.confirmed || r.recorded || r.created || r.sent || r.postponed || r.finished)) console.log(name, JSON.stringify(r));
     } catch (e) {
       failures.push(`${name}: ${(e as Error).message}`);
     }
@@ -94,6 +111,7 @@ export async function runScheduled(env: Env): Promise<void> {
     return data;
   });
   await step('send', () => sendWeeklyPayouts(env, db));
+  await step('transfers', () => checkTransfers(env, db));
 
   if (failures.length) throw new Error(failures.join(' | ')); // shows as a failed cron run in Cloudflare
 }

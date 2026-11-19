@@ -61,6 +61,14 @@ sequenceDiagram
 - **Held aside** (`needs_review` + `suspense`): a wrong amount, a second payment for a paid prescription, or a purchase
   that cannot be applied. Nothing is lost; the admin refunds it, or approves the purchase in Payments to verify.
 
+- **ODYSSEY withdrawals** (migration 0022): Admin → Money → Overview → "Take out ODYSSEY's revenue". ODYSSEY's own
+  payout account (`odyssey_payout_account`; changing it pauses withdrawals for 24 hours). The Worker (`paymongo-ops`
+  `withdraw`) sends at most ODYSSEY's own revenue (`odyssey_revenue_available()`) and at most what the wallet holds beyond
+  doctors' balances, payouts being sent and money held aside, each less PayMongo's transfer fee. Ledger account
+  `odyssey_withdrawal`; a failed withdrawal puts the money and fee back.
+- **Transfer results**: by webhook, or from the 15-minute cron asking PayMongo (`GET /v2/transfers/:id`) about doctor
+  payouts and withdrawals still `processing`.
+
 ## PayMongo webhook
 URL: `https://<your-site>/api/payment-webhook` (one per mode: test and live).
 The Worker passes `payment.paid` on as `checkout_session.payment.paid`, matched by the intent id that

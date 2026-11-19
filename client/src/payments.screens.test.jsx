@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import DoctorEarnings from './features/doctor/pages/DoctorEarnings';
 import AdminMoney from './features/admin/pages/AdminMoney';
 import { OnlinePay } from './features/patient/components/OnlinePay';
+import { OdysseyWithdrawals } from './features/admin/components/OdysseyWithdrawals';
 import { Checkout } from './features/doctor/components/Checkout';
 
 const methods = [{ method: 'qrph', label: 'QR Ph', fee_pct: 3, fee_fixed: 0, fee_min: 20 }, { method: 'card', label: 'Visa / Mastercard', fee_pct: 5.5, fee_fixed: 15, fee_min: 0 }];
@@ -75,5 +76,16 @@ describe('new screens render with sample data', () => {
   it('plan checkout renders nothing while closed (regression: reading amount of null)', () => {
     const html = wrap(<Checkout request={null} onClose={() => {}} />, (qc) => qc.setQueryData(['gateway-config'], { enabled: true, manual_fallback: true, methods }));
     expect(html).toBe('');
+  });
+  it('odyssey withdrawals: the most it can take out is capped by the wallet and the fee', () => {
+    const html = wrap(<OdysseyWithdrawals walletSafe={300} />, (qc) => qc.setQueryData(['admin', 'money', 'withdrawals'], {
+      account: { provider: 'instapay', bank_code: 'GCASH', bank_name: 'GCash', account_name: 'Odyssey', account_number: '09171234567', withdrawals_resume_at: null },
+      revenue_available: 551.7, transfer_fee: 11.2,
+      withdrawals: [{ id: 'w1', amount: 100, fee: 11.2, status: 'sent', bank_name: 'GCash', account_end: '4567', created_at: '2026-11-20T01:00:00Z' }],
+    }));
+    const t = text(html);
+    expect(t).toContain('₱288.80'); // min(551.70, 300) - 11.20
+    expect(t).toContain('GCash · Odyssey · ending 4567');
+    expect(t).toContain('Sent');
   });
 });

@@ -9,6 +9,7 @@ import { cn, formatDate, formatDateTime, formatPeso } from '../../../lib/utils';
 import { downloadCsv, money } from '../../../lib/csv';
 import { EIGHT_PCT_LIMIT, EXEMPT, taxOptions } from '../../../lib/tax';
 import { feeFor, paymongoOps, rateText } from '../../billing/gateway';
+import { OdysseyWithdrawals } from '../components/OdysseyWithdrawals';
 import { PayMongoDeductions } from '../components/PayMongoDeductions';
 import { RevenueByDay } from '../components/RevenueByDay';
 import {
@@ -102,8 +103,8 @@ function Overview() {
           <div>
             <h2 className="font-display text-lg font-semibold text-[#152839]">PayMongo wallet coverage</h2>
             <p className="max-w-3xl text-sm text-[#45546a]">
-              The wallet must always hold what ODYSSEY owes doctors. Saturday payouts only go out while the wallet covers them.
-              Take ODYSSEY’s own money out (in the PayMongo dashboard) only up to the safe amount.
+              The wallet must always hold what ODYSSEY owes doctors. Saturday payouts only go out while the wallet covers them,
+              and ODYSSEY’s own withdrawals below can only use what is left over.
             </p>
           </div>
           <Button variant="secondary" loading={wallet.isPending} onClick={() => wallet.mutate()}>Check PayMongo wallet now</Button>
@@ -113,10 +114,12 @@ function Overview() {
           <Figure label="Wallet available" value={liveAvail ?? 0} note={liveAvail == null ? 'Press “Check PayMongo wallet now”' : livePending != null ? `${formatPeso(livePending)} pending settlement` : undefined} />
           <Figure label="Covered" value={liveAvail == null ? 0 : Math.min(liveAvail, mustKeep)}
             note={liveAvail == null ? undefined : liveAvail >= mustKeep ? 'Fully covered' : `Short by ${formatPeso(mustKeep - liveAvail)}. Wait for Thursday’s settlement before payouts.`} />
-          <Figure strong label="Safe for ODYSSEY to take out" value={liveAvail == null ? 0 : Math.max(liveAvail - mustKeep, 0)}
-            note={liveAvail == null ? 'Needs the wallet balance' : 'Keep a little extra for refunds'} />
+          <Figure strong label="Wallet beyond doctors’ money" value={liveAvail == null ? 0 : Math.max(liveAvail - mustKeep, 0)}
+            note={liveAvail == null ? 'Needs the wallet balance' : 'ODYSSEY can take out its revenue up to this, below'} />
         </div>
       </section>
+
+      <OdysseyWithdrawals walletSafe={liveAvail == null ? null : Math.max(liveAvail - mustKeep, 0)} />
 
       <RevenueByDay />
 

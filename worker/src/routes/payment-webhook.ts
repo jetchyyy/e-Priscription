@@ -28,7 +28,16 @@ export async function paymentWebhook(req: Request, env: Env): Promise<Response> 
     return json({ ok: true, ignored: 'invalid_json' });
   }
 
-  const { data, error } = await serviceClient(env).rpc('gateway_handle_event', { p_event: asCheckoutEvent(event) });
+  const db = serviceClient(env);
+  // A transfer for an ODYSSEY withdrawal (migration 0022) is settled there; anything else goes to gateway_handle_event.
+  const w = await db.rpc('gateway_handle_withdrawal_event', { p_event: event });
+  if (w.error && w.error.code !== 'PGRST202') {
+    console.error('gateway_handle_withdrawal_event failed:', w.error.code, w.error.message);
+    return json({ error: 'internal_error' }, 500);
+  }
+  if (w.data) return json({ ok: true, result: w.data.result ?? null, duplicate: w.data.duplicate ?? false });
+
+  const { data, error } = await db.rpc('gateway_handle_event', { p_event: asCheckoutEvent(event) });
   if (error) {
     console.error('gateway_handle_event failed:', error.code, error.message); // never log payloads (patient data)
     return json({ error: 'internal_error' }, 500);

@@ -36,32 +36,27 @@ export async function walletAvailableCentavos(env: Env): Promise<number | null> 
   return v == null || !Number.isFinite(Number(v)) ? null : Number(v);
 }
 
-/**
- * Sends one claimed payout through PayMongo (Idempotency-Key = the payout id, so a retry never pays twice)
- * and records the answer with gateway_payout_result.
- */
-export async function sendClaimedPayout(env: Env, svc: Db, po: ClaimedPayout): Promise<{ outcome: SendOutcome; detail: string | null }> {
+/** A transfer out of ODYSSEY's wallet: a doctor payout or an ODYSSEY withdrawal (Idempotency-Key = `${kind}-${id}`). */
+export async function sendTransfer(
+  env: Env, kind: 'payout' | 'withdrawal', t: ClaimedPayout | Omit<ClaimedPayout, 'doctor_id'>,
+): Promise<{ outcome: SendOutcome; transferId: string | null; fee: number | null; detail: string | null }> {
   const src = await sourceAccount(env);
-  if (!src) {
-    await svc.rpc('gateway_payout_result', { p_id: po.id, p_outcome: 'rejected', p_transfer_id: null, p_fee: null,
-                                             p_detail: 'ODYSSEY wallet account not found. Check that the PayMongo Wallet is active.' });
-    return { outcome: 'rejected', detail: 'ODYSSEY’s PayMongo wallet was not found' };
-  }
+  if (!src) return { outcome: 'rejected', transferId: null, fee: null, detail: 'ODYSSEY’s PayMongo wallet was not found' };
 
   const res = await pm(env, '/v2/batch_transfers', {
     method: 'POST',
-    idempotencyKey: `payout-${po.id}`,
+    idempotencyKey: `${kind}-${t.id}`,
     body: {
       transfers: [{
-        provider: po.provider,
-        amount: centavos(po.net_amount),
+        provider: t.provider,
+        amount: centavos(t.net_amount),
         currency: 'PHP',
-        purpose: 'Doctor payout',
-        description: 'ODYSSEY E-Prescription payout',
-        reference_number: po.reference,
+        purpose: kind === 'payout' ? 'Doctor payout' : 'ODYSSEY revenue withdrawal',
+        description: kind === 'payout' ? 'ODYSSEY E-Prescription payout' : 'ODYSSEY E-Prescription revenue',
+        reference_number: t.reference,
         source_account: src,
-        destination_account: { number: po.account_number, name: po.account_name, bic: po.bank_code },
-        metadata: { payout_id: po.id, doctor_id: po.doctor_id },
+        destination_account: { number: t.account_number, name: t.account_name, bic: t.bank_code },
+        metadata: kind === 'payout' ? { payout_id: t.id, doctor_id: (t as ClaimedPayout).doctor_id } : { withdrawal_id: t.id },
       }],
     },
   });
@@ -71,14 +66,31 @@ export async function sendClaimedPayout(env: Env, svc: Db, po: ClaimedPayout): P
   if (res.ok && tr) outcome = tr.status === 'succeeded' ? 'succeeded' : tr.status === 'failed' ? 'rejected' : 'accepted';
   else if (res.status >= 400 && res.status < 500 && res.status !== 409) outcome = 'rejected';
   else outcome = 'unknown';
+  return { outcome, transferId: tr?.id ?? null, fee: tr?.fee != null ? Number(tr.fee) / 100 : null, detail: tr?.provider_error || res.error || null };
+}
 
-  const detail = tr?.provider_error || res.error || null;
+/** Sends one claimed doctor payout and records PayMongo's answer with gateway_payout_result. */
+export async function sendClaimedPayout(env: Env, svc: Db, po: ClaimedPayout): Promise<{ outcome: SendOutcome; detail: string | null }> {
+  const r = await sendTransfer(env, 'payout', po);
   const { error } = await svc.rpc('gateway_payout_result', {
-    p_id: po.id, p_outcome: outcome, p_transfer_id: tr?.id ?? null,
-    p_fee: tr?.fee != null ? Number(tr.fee) / 100 : null, p_detail: detail,
+    p_id: po.id, p_outcome: r.outcome, p_transfer_id: r.transferId, p_fee: r.fee, p_detail: r.detail,
   });
   if (error) console.error('gateway_payout_result failed:', error.message);
-  return { outcome, detail };
+  return { outcome: r.outcome, detail: r.detail };
+}
+
+/** One transfer's state at PayMongo (GET /v2/transfers/:id), for results whose webhook never came. */
+export async function transferStatus(env: Env, transferId: string) {
+  const res = await pm(env, `/v2/transfers/${encodeURIComponent(transferId)}`);
+  if (!res.ok) return null;
+  const t = res.data?.data ?? res.data;
+  const a = t?.attributes ?? t ?? {};
+  return {
+    status: String(a.status ?? ''),
+    detail: a.provider_error || a.failure_reason || a.error_code || null,
+    providerRef: a.provider_reference_number || null,
+    fee: a.fee == null || a.fee === '' ? null : Number(a.fee) / 100,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------
