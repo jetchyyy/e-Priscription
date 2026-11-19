@@ -7,6 +7,7 @@
 import type { Env } from '../env';
 import { json, readJson } from '../http';
 import { QRPH_REFUNDS_API, centavos, friendly, pm } from '../paymongo';
+import { sendClaimedPayout } from '../payouts';
 import { getUser, serviceClient, userClient } from '../supabase';
 
 const bankCache = new Map<string, { at: number; list: { code: string; name: string }[] }>();
@@ -25,20 +26,6 @@ async function receivingInstitutions(env: Env, provider: string) {
     .sort((a: any, b: any) => a.name.localeCompare(b.name));
   bankCache.set(provider, { at: Date.now(), list });
   return list;
-}
-
-/** ODYSSEY's wallet account that payouts are sent from. Set PAYMONGO_SOURCE_ACCOUNT_* to skip the lookup. */
-async function sourceAccount(env: Env) {
-  const number = env.PAYMONGO_SOURCE_ACCOUNT_NUMBER;
-  const name = env.PAYMONGO_SOURCE_ACCOUNT_NAME;
-  const bic = env.PAYMONGO_SOURCE_ACCOUNT_BIC;
-  if (number && name && bic) return { number, name, bic };
-  const res = await pm(env, '/v2/wallets');
-  if (!res.ok) return null;
-  const wallet = (res.data?.data ?? [])[0];
-  const src = wallet?.source_account ?? wallet?.attributes?.source_account;
-  if (!src?.number) return null;
-  return { number: String(src.number), name: String(src.name ?? ''), bic: String(src.bic ?? 'PAEYPHM2XXX') };
 }
 
 export async function paymongoOps(req: Request, env: Env): Promise<Response> {
@@ -76,48 +63,10 @@ export async function paymongoOps(req: Request, env: Env): Promise<Response> {
     const { data: po, error } = await user.rpc('admin_begin_payout', { p_id: body.payout_id });
     if (error) return json({ error: friendly(error) }, error.code === '42501' ? 403 : 400);
 
-    const svc = serviceClient(env);
-    const src = await sourceAccount(env);
-    if (!src) {
-      await svc.rpc('gateway_payout_result', { p_id: po.id, p_outcome: 'rejected', p_transfer_id: null, p_fee: null,
-                                               p_detail: 'ODYSSEY wallet account not found. Check that the PayMongo Wallet is active.' });
-      return json({ error: 'Could not find ODYSSEY’s PayMongo wallet. Nothing was sent, and the money is back in the doctor’s balance.' }, 502);
-    }
-
-    const res = await pm(env, '/v2/batch_transfers', {
-      method: 'POST',
-      idempotencyKey: `payout-${po.id}`,
-      body: {
-        transfers: [{
-          provider: po.provider,
-          amount: centavos(po.net_amount),
-          currency: 'PHP',
-          purpose: 'Doctor payout',
-          description: 'ODYSSEY E-Prescription payout',
-          reference_number: po.reference,
-          source_account: src,
-          destination_account: { number: po.account_number, name: po.account_name, bic: po.bank_code },
-          metadata: { payout_id: po.id, doctor_id: po.doctor_id },
-        }],
-      },
-    });
-
-    const tr = res.data?.data?.transfers?.[0];
-    let outcome: 'accepted' | 'succeeded' | 'rejected' | 'unknown';
-    if (res.ok && tr) outcome = tr.status === 'succeeded' ? 'succeeded' : tr.status === 'failed' ? 'rejected' : 'accepted';
-    else if (res.status >= 400 && res.status < 500 && res.status !== 409) outcome = 'rejected';
-    else outcome = 'unknown';
-
-    const detail = tr?.provider_error || res.error || null;
-    const { data: result, error: e2 } = await svc.rpc('gateway_payout_result', {
-      p_id: po.id, p_outcome: outcome, p_transfer_id: tr?.id ?? null,
-      p_fee: tr?.fee != null ? Number(tr.fee) / 100 : null, p_detail: detail,
-    });
-    if (e2) console.error('gateway_payout_result failed:', e2.message);
-
+    const { outcome, detail } = await sendClaimedPayout(env, serviceClient(env), po);
     if (outcome === 'rejected') return json({ error: `PayMongo did not accept the transfer: ${detail ?? 'unknown reason'}. The money is back in the doctor’s balance.` }, 400);
     if (outcome === 'unknown') return json({ error: 'PayMongo did not give a clear answer. Check the transfer in the PayMongo dashboard before trying again.' }, 502);
-    return json({ ok: true, status: result });
+    return json({ ok: true, status: outcome });
   }
 
   if (action === 'refund') {

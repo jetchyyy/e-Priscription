@@ -40,16 +40,20 @@ sequenceDiagram
 - **Ledger** (`ledger_entries`) is append-only. Accounts: `doctor`, `odyssey_fee`, `odyssey_sales`, `paymongo_cost`,
   `payout_fee`, `suspense`. Every balance on every screen is a sum of lines. The sum of all lines is the money that
   should be with PayMongo before ODYSSEY's own withdrawals.
-- **Weekly cycle** (migration 0018): PayMongo settles to ODYSSEY's wallet every Thursday. A doctor's share of a payment
-  made Monday to Sunday (Manila) becomes available on the Saturday after (`payout_saturday()`; `hold_days` adds extra
-  days, 0 by default). Every Saturday 08:00 Manila the Worker cron (`0 0 * * SAT` UTC) runs
-  `cron_prepare_weekly_payouts()`: one payout per doctor for everything available, at least `min_payout`. An admin checks the
-  account names and sends them (Admin → Money → Payouts → Send all ready). PayMongo does not check payout bank accounts.
-- **Withholding tax**: PayMongo withholds 0.5% of gross remittances for the BIR (RR 5-2025). When a payment is marked paid,
-  a trigger books it: the doctor bears it on their share (`withholding_tax` line on their balance), ODYSSEY on its fee and
-  on sales (`withholding_tax` account, a credit on ODYSSEY's BIR 2307). `gateway_settings.withholding_pct` is
-  admin-editable; set 0 while PayMongo has ODYSSEY as exempt (under ₱500,000 gross for the year).
-- **Payouts**: prepared on Saturday (money leaves the balance at once) → admin sends from the admin page
+- **Weekly cycle** (migrations 0018, 0019): PayMongo settles to ODYSSEY's wallet every Thursday. A doctor's share of a
+  payment made Monday to Sunday (Manila) becomes available on the Saturday after (`payout_saturday()`; `hold_days` adds
+  extra days, 0 by default).
+- **Automatic payouts**: the Worker cron (`*/15 * * * *`, `worker/src/cron.ts`) runs, for 72 hours from Saturday 00:00
+  Manila, `cron_prepare_weekly_payouts()` (one payout per doctor for everything available, at least `min_payout`; a
+  rejected one is retried after 2 hours, at most 3 times a week), then sends those whose account name matches the verified
+  doctor, while the PayMongo Wallet covers them. Name mismatches wait in Admin → Money → Payouts. PayMongo does not check
+  payout bank accounts.
+- **Digital tax** (0.5% under RR 5-2025): PayMongo keeps it when it settles to the wallet. Each tick the cron reads
+  `GET /v1/payouts` and records `amount − net − fee − refunds − disputes` per payout in `paymongo_deductions` (anything over
+  1.6% of a payout is logged for a person instead). An admin can add or remove one by hand. Each is a line on the
+  `withholding_tax` account. Doctors bear it on their share: each prescription payment moves `withholding_pct` of the share
+  from the doctor to that account, so its balance is ODYSSEY's own part (a credit on ODYSSEY's BIR 2307).
+- **Payouts**: prepared on Saturday (money leaves the balance at once) → sent by the cron, or by an admin from the admin page
   (`paymongo-ops` → `POST /v2/batch_transfers` with an Idempotency-Key) → `transfer.outward.successful|failed` webhook.
   A failure, rejection or cancellation puts the money back with a new ledger line.
 - **Refunds** (admin): fees are not refunded. A prescription refunds its price from the doctor's balance; a purchase

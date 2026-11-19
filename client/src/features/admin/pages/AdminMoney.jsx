@@ -9,6 +9,8 @@ import { cn, formatDate, formatDateTime, formatPeso } from '../../../lib/utils';
 import { downloadCsv, money } from '../../../lib/csv';
 import { EIGHT_PCT_LIMIT, EXEMPT, taxOptions } from '../../../lib/tax';
 import { feeFor, paymongoOps, rateText } from '../../billing/gateway';
+import { PayMongoDeductions } from '../components/PayMongoDeductions';
+import { RevenueByDay } from '../components/RevenueByDay';
 import {
   addExpense, deleteExpense, expenseReceiptUrl, fetchAdminPayouts, prepareWeeklyPayouts, fetchDoctorBalances, fetchExpenses,
   fetchGatewayAdminConfig, fetchGatewayPayments, fetchMoneyOverview, fetchTaxSummary, rejectPayout, resolvePayout,
@@ -76,6 +78,9 @@ function Overview() {
   const o = q.data;
   const live = wallet.data?.wallets?.[0];
   const liveAvail = live?.available != null ? Number(live.available) / 100 : null;
+  const livePending = live?.pending != null ? Number(live.pending) / 100 : null;
+  // What must stay in the wallet: every doctor's balance (on hold or not), payouts being sent, and money held aside.
+  const mustKeep = Number(o.owed_to_doctors) + Number(o.payouts_requested) + Math.max(Number(o.suspense), 0);
 
   return (
     <div className="space-y-6">
@@ -92,6 +97,29 @@ function Overview() {
         <Figure label="Paid out to doctors" value={o.paid_out} note={Number(o.payouts_requested) ? `${formatPeso(o.payouts_requested)} in progress` : undefined} />
       </div>
 
+      <section className="space-y-3 rounded-[20px] border border-[#dce1e8] bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[#152839]">PayMongo wallet coverage</h2>
+            <p className="max-w-3xl text-sm text-[#45546a]">
+              The wallet must always hold what ODYSSEY owes doctors. Saturday payouts only go out while the wallet covers them.
+              Take ODYSSEY’s own money out (in the PayMongo dashboard) only up to the safe amount.
+            </p>
+          </div>
+          <Button variant="secondary" loading={wallet.isPending} onClick={() => wallet.mutate()}>Check PayMongo wallet now</Button>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Figure label="Must stay in the wallet" value={mustKeep} note="Doctors’ balances, payouts being sent, money held aside" />
+          <Figure label="Wallet available" value={liveAvail ?? 0} note={liveAvail == null ? 'Press “Check PayMongo wallet now”' : livePending != null ? `${formatPeso(livePending)} pending settlement` : undefined} />
+          <Figure label="Covered" value={liveAvail == null ? 0 : Math.min(liveAvail, mustKeep)}
+            note={liveAvail == null ? undefined : liveAvail >= mustKeep ? 'Fully covered' : `Short by ${formatPeso(mustKeep - liveAvail)}. Wait for Thursday’s settlement before payouts.`} />
+          <Figure strong label="Safe for ODYSSEY to take out" value={liveAvail == null ? 0 : Math.max(liveAvail - mustKeep, 0)}
+            note={liveAvail == null ? 'Needs the wallet balance' : 'Keep a little extra for refunds'} />
+        </div>
+      </section>
+
+      <RevenueByDay />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
           <h2 className="font-display text-lg font-semibold text-[#152839]">ODYSSEY’s own money</h2>
@@ -103,8 +131,8 @@ function Overview() {
             ['ODYSSEY earned', o.odyssey_earned, true],
           ]} />
           <Rows rows={[
-            ['Tax withheld by PayMongo on ODYSSEY’s part (credit on your BIR 2307)', o.tax_withheld_odyssey ?? 0],
-            ['Tax withheld on doctors’ shares (taken from their shares)', o.tax_withheld_doctors ?? 0],
+            ['Digital tax, ODYSSEY’s part (credit on your BIR 2307)', o.tax_withheld_odyssey ?? 0],
+            ['Digital tax taken from doctors’ shares', o.tax_withheld_doctors ?? 0],
           ]} />
         </section>
         <section className="space-y-3">
@@ -112,7 +140,7 @@ function Overview() {
           <Rows rows={[
             ['Their shares of prescription payments, less payouts and refunds', o.owed_to_doctors, true],
             ['Waiting for PayMongo’s Thursday settlement', o.doctors_on_hold],
-            ['Ready for Saturday’s payout', o.doctors_available],
+            ['Goes out on Saturday', o.doctors_available],
             ['In payouts being sent', o.payouts_requested],
             ['Owed back by doctors after refunds', o.doctors_owing],
             ['Refunded to patients so far', o.refunded],
@@ -133,7 +161,6 @@ function Overview() {
           ['Held aside (needs review)', o.suspense],
         ]} />
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="secondary" loading={wallet.isPending} onClick={() => wallet.mutate()}>Check PayMongo wallet now</Button>
           {liveAvail != null && (
             <p className="text-sm text-[#152839]">
               Wallet available: <strong className="tabular-nums">{formatPeso(liveAvail)}</strong>
@@ -145,6 +172,8 @@ function Overview() {
           {wallet.data && liveAvail == null && <p className="text-sm text-[#45546a]">PayMongo did not return a wallet balance. Check it in the dashboard.</p>}
         </div>
       </section>
+
+      <PayMongoDeductions />
     </div>
   );
 }
@@ -264,7 +293,7 @@ function WeeklyRun({ payouts }) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-[18px] bg-[#f9f8f3] p-4">
-      <Button variant="secondary" loading={prepare.isPending} onClick={() => prepare.mutate()}>Prepare this week’s payouts now</Button>
+      <Button variant="secondary" loading={prepare.isPending} onClick={() => prepare.mutate()}>Prepare payouts now</Button>
       <Button variant="accent" disabled={!ready.length || Boolean(progress)} loading={Boolean(progress)}
         onClick={() => { if (window.confirm(`Send ${ready.length} payout${ready.length === 1 ? '' : 's'}, ${formatPeso(ready.reduce((t, p) => t + Number(p.net_amount), 0))} in all?`)) sendAll(); }}>
         {progress ?? `Send all ready (${ready.length})`}
@@ -281,8 +310,9 @@ function Payouts() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-[#45546a]">
-          Every Saturday 8:00 AM the system prepares one payout per doctor for everything available. Check the account names, then send.
-          PayMongo does not check bank accounts. The transfer fee comes out of the amount, so the doctor receives the “send” figure.
+          Payouts are automatic. From Saturday 8:00 AM the system pays each doctor everything available, as soon as the PayMongo
+          wallet covers it, and tries a rejected transfer again up to 3 times. Payouts whose account name does not match the
+          verified doctor wait here for you, because PayMongo does not check bank accounts. The transfer fee comes out of the amount.
         </p>
         <Select aria-label="Show" value={filter} onChange={(e) => setFilter(e.target.value)} wrapperClassName="w-48">
           <option value="open">To do</option>

@@ -365,8 +365,9 @@ export default function DoctorEarnings() {
         <div>
           <h2 id="payout-h" className="font-display text-xl font-semibold text-[#152839]">Get paid</h2>
           <p className="mt-1 text-sm text-[#45546a]">
-            Every Saturday we send everything available to your account. PayMongo pays ODYSSEY on Thursdays, so a payment made
-            Monday to Sunday goes out the Saturday after. The smallest payout is {formatPeso(rules.min_payout)}; each transfer
+            Payouts are automatic: every Saturday we send everything available to your account, no need to ask. PayMongo pays
+            ODYSSEY on Thursdays, so a payment made Monday to Sunday goes out the Saturday after. Keep your account name exactly
+            as your bank shows it and matching your verified name, or the payout waits for ODYSSEY to check it. The smallest payout is {formatPeso(rules.min_payout)}; each transfer
             costs {formatPeso(rules.payout_fee)}, taken from the amount.
           </p>
         </div>

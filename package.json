@@ -13,7 +13,8 @@
     "preview": "npm --prefix client run preview",
     "test": "npm --prefix client run test",
     "typecheck:worker": "tsc -p worker/tsconfig.json",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test:worker": "client/node_modules/.bin/vitest run --root worker"
   },
   "keywords": [],
   "author": "",

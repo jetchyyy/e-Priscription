@@ -314,6 +314,14 @@ export async function saveGatewaySettings(s) {
   if (s.withholding_pct != null) await rpc('admin_set_withholding', { p_pct: Number(s.withholding_pct) }); // migration 0018
 }
 
+/** PayMongo's payout deductions (the digital tax) and ODYSSEY's revenue per day (migration 0019). */
+export const fetchDeductions = () => rpc('admin_deductions');
+export const recordDeduction = ({ kind, amount, occurredAt, payoutId, reference, note }) => rpc('admin_record_deduction', {
+  p_kind: kind, p_amount: amount, p_occurred_at: occurredAt, p_payout_id: payoutId || null, p_reference: reference || null, p_note: note || null,
+});
+export const removeDeduction = (id) => rpc('admin_remove_deduction', { p_id: id });
+export const fetchRevenueByDay = (days) => rpc('admin_revenue_by_day', { p_days: days });
+
 /** Creates this week's payouts now (the Saturday cron does the same). Returns { created, total, below_minimum }. */
 export const prepareWeeklyPayouts = () => rpc('admin_prepare_weekly_payouts');
 
