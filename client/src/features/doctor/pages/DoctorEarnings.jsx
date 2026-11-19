@@ -53,7 +53,7 @@ function OnlineSettings({ settings, methods, enabled: gatewayOn }) {
     mutationFn: (v) => setOnlinePayments(v),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: earningsQuery.queryKey });
-      toast.success(v.enabled ? (settings.online_enabled ? 'Saved' : 'Online payments are on') : 'Online payments are off');
+      toast.success(settings.online_enabled ? 'Saved' : 'Online payments are on');
     },
     onError: (e) => toast.error(e?.message || 'Could not save.'),
   });
@@ -67,7 +67,8 @@ function OnlineSettings({ settings, methods, enabled: gatewayOn }) {
           <h2 id="online-h" className="font-display text-xl font-semibold text-[#152839]">Online payments</h2>
           <p className="mt-1 max-w-2xl text-sm text-[#45546a]">
             Patients pay through PayMongo and their prescription opens by itself. No receipts to check.
-            ODYSSEY keeps your share and sends it to your bank when you ask.
+            ODYSSEY keeps your share and sends it to your bank every Saturday. Once on, online payments stay on;
+            you can still choose who pays ODYSSEY’s fee.
           </p>
         </div>
         <span className={cn('rounded-full px-3 py-1 text-xs font-semibold', settings.online_enabled ? 'bg-[#152839] text-[#f9f8f3]' : 'bg-[#ece7de] text-[#152839]')}>
@@ -133,9 +134,11 @@ function OnlineSettings({ settings, methods, enabled: gatewayOn }) {
         <label className="flex gap-3 rounded-[16px] bg-[#f9f8f3] p-4 text-sm text-[#152839]">
           <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#152839]" />
           <span>
-            I appoint ODYSSEY to collect my patients’ payments for me as my collecting agent. My share is my income and
-            ODYSSEY holds it for me until I ask for a payout. I agree to the fees, the hold period and the refund rules in
-            the <Link to="/terms#online-payments" className="font-semibold underline" target="_blank">Terms</Link>.
+            I appoint ODYSSEY to collect my patients’ payments for me as my collecting agent. My share is my income;
+            ODYSSEY holds it for me and sends it to my account every Saturday. I agree to the fees, the weekly payout schedule,
+            the tax PayMongo withholds and the refund rules in
+            the <Link to="/terms#online-payments" className="font-semibold underline" target="_blank">Terms</Link>. Online
+            payments stay on once I turn them on.
           </span>
         </label>
       )}
@@ -143,10 +146,8 @@ function OnlineSettings({ settings, methods, enabled: gatewayOn }) {
       <div className="flex flex-wrap gap-3">
         {settings.online_enabled ? (
           <>
-            <Button disabled={feeMode === settings.fee_mode} loading={save.isPending && save.variables?.enabled}
+            <Button disabled={feeMode === settings.fee_mode} loading={save.isPending}
               onClick={() => save.mutate({ enabled: true, feeMode })}>Save</Button>
-            <Button variant="secondary" loading={save.isPending && !save.variables?.enabled}
-              onClick={() => save.mutate({ enabled: false, feeMode })}>Turn off online payments</Button>
           </>
         ) : (
           <Button variant="accent" disabled={(needsTerms && !accept) || !gatewayOn} loading={save.isPending}

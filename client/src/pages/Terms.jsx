@@ -162,7 +162,7 @@ const S = [
         </p>
         <h3>ODYSSEY as collecting agent</h3>
         <ul>
-          <li>By turning on online payments, the physician appoints ODYSSEY to collect patients’ payments for the physician as the physician’s collecting agent.</li>
+          <li>By turning on online payments, the physician appoints ODYSSEY to collect patients’ payments for the physician as the physician’s collecting agent. Once turned on, online payments stay on for that physician’s prescriptions; the physician can still choose who pays ODYSSEY’s fee.</li>
           <li>The physician’s share of each payment belongs to the physician and is the physician’s income. ODYSSEY holds it for the physician until it is paid out, and does not treat it as ODYSSEY’s income.</li>
           <li>ODYSSEY’s income is only its service fee on each payment, and what physicians pay ODYSSEY for plans, seats and packs.</li>
           <li>Each physician is responsible for their own taxes on their share, and for any receipt the law requires them to issue to their patients for their professional fee.</li>
@@ -174,10 +174,11 @@ const S = [
           <li>Each payment keeps the fee in force when it was made. ODYSSEY will give physicians at least 30 days’ notice of a fee increase.</li>
           <li>ODYSSEY is not registered for VAT and does not charge VAT on its fees.</li>
         </ul>
-        <h3>Hold period and payouts</h3>
+        <h3>Weekly payouts</h3>
         <ul>
-          <li>The physician’s share becomes available for payout after a hold period, shown in the dashboard (7 days at the time of writing). The hold covers the time PayMongo takes to settle payments and the time in which card payments can be disputed.</li>
-          <li>The physician asks for a payout from the dashboard, to a bank or e-wallet account in the physician’s own name. ODYSSEY checks each request before sending it, and may hold a payout while it checks an account that does not match the physician’s verified name.</li>
+          <li>PayMongo settles payments to ODYSSEY weekly. The physician’s share of a payment made Monday to Sunday (Philippine time) is paid out on the Saturday after, once PayMongo has settled it.</li>
+          <li>Payouts are sent automatically to the bank or e-wallet account the physician sets in the dashboard, which must be in the physician’s own name. PayMongo does not check these accounts; the physician is responsible for entering them correctly. ODYSSEY may hold a payout while it checks an account that does not match the physician’s verified name.</li>
+          <li>PayMongo withholds a creditable withholding tax for the Bureau of Internal Revenue on online payments (0.5% at the time of writing). The part on the physician’s share is taken from that share and shown in the dashboard.</li>
           <li>The smallest payout and the transfer fee are shown in the dashboard. The transfer fee is taken from the amount sent.</li>
           <li>The dashboard shows every payment, ODYSSEY’s fee, the physician’s share, what is on hold, what is available, every payout and every refund. A monthly statement can be downloaded.</li>
         </ul>

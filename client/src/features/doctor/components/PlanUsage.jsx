@@ -45,6 +45,41 @@ function Bar({ plan, level }) {
   );
 }
 
+/**
+ * The whole allowance in one bar: this month's plan prescriptions (used, then left) and the extra prescriptions
+ * bought in packs, which are used only after the plan's run out and do not reset.
+ */
+function AllowanceBar({ plan, level }) {
+  const used = Math.min(plan.rx_used, plan.rx_limit);
+  const planLeft = Math.max(plan.rx_limit - plan.rx_used, 0);
+  const extra = credits(plan);
+  const total = Math.max(plan.rx_limit + extra, 1);
+  const w = (v) => `${(v / total) * 100}%`;
+  const usedTone = level === 'ok' ? 'bg-[#152839]' : level === 'low' ? 'bg-[#ff6f07]' : 'bg-[#b8470a]';
+  return (
+    <div className="space-y-2">
+      <div
+        className="flex h-3 w-full overflow-hidden rounded-full bg-[#ece7de]"
+        role="img"
+        aria-label={`${n(used)} used, ${n(planLeft)} left in your plan this month, ${n(extra)} extra`}
+      >
+        <div className={`h-full ${usedTone} transition-[width] duration-500`} style={{ width: w(used) }} />
+        <div className="h-full bg-[#c8d0db] transition-[width] duration-500" style={{ width: w(planLeft) }} />
+        <div className="h-full bg-[#f3b98f] transition-[width] duration-500" style={{ width: w(extra) }} />
+      </div>
+      <ul className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#45546a]">
+        <li className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${usedTone}`} />{n(used)} used</li>
+        <li className="flex items-center gap-1.5"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#c8d0db]" />{n(planLeft)} left in your plan, until {formatDate(plan.resets_at)}</li>
+        {extra > 0 && (
+          <li className="flex items-center gap-1.5"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#f3b98f]" />
+            {n(extra)} extra, used after your plan’s run out{plan.credits?.expires_at ? `; the first batch expires ${formatDate(plan.credits.expires_at)}` : ''}
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 function planLine(plan) {
   if (plan.clinic) return `${plan.clinic.name} · ${plan.plan_name} plan${plan.current_period_end ? `, paid until ${formatDate(plan.current_period_end)}` : ''}`;
   if (!plan.is_paid) return `${plan.plan_name} plan, free`;
@@ -70,6 +105,8 @@ export function PlanUsage() {
   const isMember = clinic?.role === 'doctor';
   const endsSoon = plan.is_paid && plan.current_period_end && new Date(plan.current_period_end) - Date.now() < 7 * DAY;
   const pending = plan.latest_request?.status === 'pending';
+  // With extra prescriptions (and no per-doctor share), show plan + extra as one allowance.
+  const split = credits(plan) > 0 && clinic?.my_cap == null;
   const outText = clinic?.limited_by === 'cap'
     ? `You have used your share of ${n(clinic.my_cap)} prescriptions this month. Ask your clinic owner to raise it, or wait until ${formatDate(plan.resets_at)}.`
     : isMember
@@ -84,16 +121,27 @@ export function PlanUsage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 id="plan-usage-h" className="text-sm font-medium text-[#45546a]">{clinic ? 'Clinic prescriptions this month' : 'Prescriptions this month'}</h2>
-          <p className="mt-1 font-display text-[28px] font-bold tabular-nums text-[#152839]">
-            {n(plan.rx_used)} <span className="text-lg font-semibold text-[#45546a]">of {n(plan.rx_limit)}</span>
-          </p>
+          {split ? (
+            <p className="mt-1 font-display text-[28px] font-bold tabular-nums text-[#152839]">
+              {n(plan.rx_left)} <span className="text-lg font-semibold text-[#45546a]">left of {n(plan.rx_limit + credits(plan))}</span>
+            </p>
+          ) : (
+            <p className="mt-1 font-display text-[28px] font-bold tabular-nums text-[#152839]">
+              {n(plan.rx_used)} <span className="text-lg font-semibold text-[#45546a]">of {n(plan.rx_limit)}</span>
+            </p>
+          )}
           <p className="text-sm text-[#45546a]">{planLine(plan)}</p>
           {clinic && (
             <p className="mt-1 text-sm font-medium text-[#152839]">
               You: {n(clinic.my_used)}{clinic.my_cap != null ? ` of ${n(clinic.my_cap)} (your share)` : ' written'}
             </p>
           )}
-          {credits(plan) > 0 && (
+          {split && (
+            <p className="mt-1 text-sm font-medium text-[#152839]">
+              {n(plan.rx_limit)} from your plan this month + {n(credits(plan))} extra you bought
+            </p>
+          )}
+          {credits(plan) > 0 && !split && (
             <p className="mt-1 text-sm font-medium text-[#152839]">
               Plus {n(credits(plan))} extra prescription{credits(plan) === 1 ? '' : 's'}
               {plan.credits.expires_at ? `, the first ${credits(plan) === 1 ? 'expires' : 'batch expires'} ${formatDate(plan.credits.expires_at)}` : ''}
@@ -112,14 +160,16 @@ export function PlanUsage() {
         </div>
       </div>
 
-      <div className="mt-4"><Bar plan={plan} level={level} /></div>
+      <div className="mt-4">{split ? <AllowanceBar plan={plan} level={level} /> : <Bar plan={plan} level={level} />}</div>
 
       <p className={`mt-3 text-sm ${level === 'ok' ? 'text-[#45546a]' : 'font-medium text-[#7a2406]'}`} role={level === 'ok' ? undefined : 'status'}>
         {level === 'out'
           ? outText
           : level === 'low'
             ? `Only ${n(plan.rx_left)} left for you. The monthly count starts again on ${formatDate(plan.resets_at)}.`
-            : `${n(plan.rx_left)} left. The monthly count starts again on ${formatDate(plan.resets_at)}.`}
+            : split
+              ? `Extra prescriptions do not reset: whatever is left stays after ${formatDate(plan.resets_at)}.`
+              : `${n(plan.rx_left)} left. The monthly count starts again on ${formatDate(plan.resets_at)}.`}
       </p>
 
       {pending && (

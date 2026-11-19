@@ -54,3 +54,20 @@ describe('history', () => {
     expect(t).toContain('New lab request');
   });
 });
+
+describe('plan usage with extra prescriptions', () => {
+  it('shows plan + extra as one allowance', async () => {
+    const { PlanUsage, myPlanQuery } = await import('./features/doctor/components/PlanUsage');
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+    qc.setQueryData(myPlanQuery.queryKey, {
+      plan_id: 'solo', plan_name: 'Solo', is_paid: true, current_period_end: '2027-01-22T00:00:00Z',
+      rx_limit: 250, rx_used: 6, rx_left: 319, resets_at: '2026-12-01T00:00:00+08:00', clinic: null,
+      credits: { remaining: 75, expires_at: '2027-01-20T00:00:00Z' },
+    });
+    const t = text(renderToString(<QueryClientProvider client={qc}><MemoryRouter><PlanUsage /></MemoryRouter></QueryClientProvider>));
+    expect(t).toContain('319 left of 325');
+    expect(t).toContain('250 from your plan this month + 75 extra you bought');
+    expect(t).toContain('244 left in your plan');
+    expect(t).toContain('75 extra, used after your plan’s run out');
+  });
+});

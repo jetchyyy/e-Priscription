@@ -43,6 +43,9 @@ async function publicCall(start, path, { method = 'GET', body } = {}) {
 /** Asks the server to check the payment with PayMongo now, so a late webhook does not keep the payer waiting. */
 export const confirmPayment = (start) => callApi('paymongo-confirm', { intent_id: start.intent_id }).catch(() => null);
 
+/** Asks the server to check this prescription's open payments with PayMongo (a patient who paid, then left). */
+export const confirmRxPayments = (rxId) => callApi('paymongo-confirm', { rx_id: rxId }).catch(() => null);
+
 /** The payment's current state: { status, next_action, last_payment_error }. */
 export async function fetchIntent(start) {
   const intent = await publicCall(start, `/payment_intents/${start.intent_id}?client_key=${encodeURIComponent(start.client_key)}`);

@@ -15,7 +15,7 @@ import { BlurredPrescription } from '../components/BlurredPrescription';
 import { PaymentQrModal } from '../components/PaymentQrModal';
 import { PrescriptionContent } from '../components/PrescriptionContent';
 import { PinUnlockCard } from '../components/PinUnlockCard';
-import { cameBackFromCheckout, clearCheckoutFlag, fetchRxOnlineOptions, gatewayConfigQuery } from '../../billing/gateway';
+import { cameBackFromCheckout, clearCheckoutFlag, confirmRxPayments, fetchRxOnlineOptions, gatewayConfigQuery } from '../../billing/gateway';
 
 export default function PrescriptionView() {
   const { id } = useParams();
@@ -50,6 +50,17 @@ export default function PrescriptionView() {
   }, [returning]);
 
   const needsPayment = Boolean(rx) && rx.status === 'unpaid' && !rx.is_owner;
+
+  // A patient who paid and then closed or reloaded the page: ask PayMongo now instead of waiting for the webhook or
+  // the 15-minute job. Once when the page opens unpaid, then every 10 seconds while it says "Confirming".
+  const askedOnce = useRef(false);
+  useEffect(() => {
+    if (!needsPayment) return undefined;
+    if (!askedOnce.current) { askedOnce.current = true; confirmRxPayments(id); }
+    if (!returning) return undefined;
+    const t = setInterval(() => confirmRxPayments(id), 10_000);
+    return () => clearInterval(t);
+  }, [needsPayment, returning, id]);
   const onlineQ = useQuery({
     queryKey: ['rx-online', id],
     queryFn: () => fetchRxOnlineOptions(id),

@@ -246,7 +246,7 @@ export default function DoctorPlan() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="choose-h" className="font-display text-xl font-semibold text-[#152839]">{role === 'owner' ? 'Renew or change your clinic plan' : 'Change plan'}</h2>
-            <p className="text-sm text-[#45546a]">Pay by GCash, Maya or bank QR. A new plan runs for a month or a year from the day we confirm it.</p>
+            <p className="text-sm text-[#45546a]">Pay online by QR Ph, GCash, Maya or card. A new plan starts as soon as the payment goes through and runs for a month or a year.</p>
           </div>
           <div role="group" aria-label="Billing period" className="flex gap-1 rounded-full border border-[#dce1e8] bg-white p-1">
             {[['monthly', 'Monthly'], ['yearly', 'Yearly']].map(([k, label]) => (

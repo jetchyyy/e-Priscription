@@ -36,12 +36,22 @@ export async function confirmIntent(env: Env, db: Db, intentId: string): Promise
   return data?.duplicate ? 'duplicate' : String(data?.result ?? 'ignored');
 }
 
-// POST /api/paymongo-confirm  { "intent_id": "pi_..." }   (no login: the answer comes from PayMongo)
+// POST /api/paymongo-confirm   (no login: the answer always comes from PayMongo, never the browser)
+//   { "intent_id": "pi_..." }   the page saw this payment succeed
+//   { "rx_id": "<21 chars>" }   the prescription page opened while unpaid: check its open payments (newest 3, 2 hours)
 export async function paymongoConfirm(req: Request, env: Env): Promise<Response> {
   if (!env.PAYMONGO_SECRET_KEY) return json({ error: 'Online payment is not set up yet' }, 503);
-  const body = await readJson<{ intent_id?: string }>(req);
-  const result = await confirmIntent(env, serviceClient(env), String(body?.intent_id ?? ''));
-  return json({ result });
+  const body = await readJson<{ intent_id?: string; rx_id?: string }>(req);
+  const db = serviceClient(env);
+  if (body?.rx_id !== undefined) {
+    if (!/^[A-Za-z0-9_-]{21}$/.test(String(body.rx_id))) return json({ result: 'invalid_rx' });
+    const { data, error } = await db.rpc<string[]>('cron_open_intents_for_rx', { p_rx: body.rx_id });
+    if (error) return json({ result: 'unavailable' }); // e.g. migration 0021 not applied yet
+    const results = [];
+    for (const id of data ?? []) results.push(await confirmIntent(env, db, id));
+    return json({ results });
+  }
+  return json({ result: await confirmIntent(env, db, String(body?.intent_id ?? '')) });
 }
 
 /** Cron: open embedded payments from the last 2 hours, checked with PayMongo. */
