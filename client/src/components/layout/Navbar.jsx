@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, LogOut, Compass, User } from 'lucide-react';
+import { Menu, LogOut, Compass, User, KeyRound } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { useAuthStore } from '../../store/authStore';
@@ -90,6 +90,15 @@ export function Navbar({ onMenu, onOpenGuide }) {
                     >
                       <User className="h-4 w-4 text-[#45546a]" />
                       <span>Profile & Clinic</span>
+                    </Link>
+                    <Link
+                      to="/doctor/profile#change-password"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-[#152839] hover:bg-[#ece7de]"
+                    >
+                      <KeyRound className="h-4 w-4 text-[#45546a]" />
+                      <span>Change password</span>
                     </Link>
                   </>
                 )}

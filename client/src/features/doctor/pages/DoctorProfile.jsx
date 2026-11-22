@@ -9,6 +9,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { useAuthStore } from '../../../store/authStore';
 import { cancelProfileChange, fetchMyChangeRequests, requestProfileChange, updateDoctorProfile } from '../api';
 import { RxSlip } from '../../marketing/components';
+import { ChangePasswordCard } from '../components/ChangePasswordCard';
 import { formatShortDate } from '../../../lib/utils';
 
 const SPECIALTIES = [
@@ -304,6 +305,12 @@ export default function DoctorProfile() {
               Pharmacies need a legible physician name, PRC license number and clinic address on the prescription.
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <ChangePasswordCard />
         </div>
       </div>
 

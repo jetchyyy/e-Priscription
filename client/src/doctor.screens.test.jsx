@@ -71,3 +71,26 @@ describe('plan usage with extra prescriptions', () => {
     expect(t).toContain('75 extra, used after your plan’s run out');
   });
 });
+
+describe('change password checklist', () => {
+  it('ticks each rule as the password gets stronger', async () => {
+    const { checkPassword } = await import('./features/doctor/components/ChangePasswordCard');
+    const weak = checkPassword('abc', { current: 'Old#Pass1234', confirm: 'abc' });
+    expect(weak.ok).toBe(false);
+    expect(weak.items.find((i) => i.id === 'length').ok).toBe(false);
+    expect(weak.items.find((i) => i.id === 'lower').ok).toBe(true);
+
+    expect(checkPassword('New#Pass1234', { current: 'Old#Pass1234', confirm: 'New#Pass1234' }).ok).toBe(true);
+    expect(checkPassword('Old#Pass1234', { current: 'Old#Pass1234', confirm: 'Old#Pass1234' }).ok).toBe(false); // same as current
+    expect(checkPassword('New#Pass1234', { current: 'x', confirm: 'New#Pass123' }).ok).toBe(false); // mismatch
+    expect(checkPassword('New# Pass1234', { current: 'x', confirm: 'New# Pass1234' }).ok).toBe(false); // space
+  });
+
+  it('renders the card with its checklist', async () => {
+    const { ChangePasswordCard } = await import('./features/doctor/components/ChangePasswordCard');
+    const t = text(wrap(<ChangePasswordCard />));
+    expect(t).toContain('Change password');
+    expect(t).toContain('At least 10 characters');
+    expect(t).toContain('Both new passwords match');
+  });
+});
