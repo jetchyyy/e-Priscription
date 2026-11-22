@@ -10,6 +10,13 @@ export const LEGAL = {
   dpoPhone: '[DPO phone]',
   npcRegistration: '[NPC registration no., if required]',
   venue: '[City]',
-  effective: '[Effective date]',
-  updated: '[Last updated date]',
+  effective: 'November 22, 2026',
+  updated: 'November 22, 2026',
 };
+
+/**
+ * The versions a patient agrees to before paying, saved with each payment. Change these to the new date whenever
+ * the Terms or the Privacy Policy change, so each record shows which text the patient saw.
+ */
+export const TERMS_VERSION = '2026-11-22';
+export const PRIVACY_VERSION = '2026-11-22';

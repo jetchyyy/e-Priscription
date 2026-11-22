@@ -29,7 +29,7 @@ const S = [
         <p>The Service is software that lets licensed physicians in the Philippines:</p>
         <ul>
           <li>write prescriptions and send them to patients as a secure link;</li>
-          <li>set an access fee that the patient pays, through a payment QR the physician provides, before the full prescription is shown; and</li>
+          <li>set an access fee that the patient pays, online through ODYSSEY or through a payment QR the physician provides, before the full prescription is shown; and</li>
           <li>keep a history of the prescriptions they have issued.</li>
         </ul>
         <p>
@@ -191,6 +191,52 @@ const S = [
         </ul>
         <p>
           A physician may turn online payments off at any time. Money already collected is still paid out under these terms.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'patients',
+    title: 'For patients',
+    body: (
+      <>
+        <p>
+          This section sums up what applies to you when you open and pay for a prescription or lab request link. Before
+          you pay, you are asked to tick a box agreeing to these Terms and confirming you have read the{' '}
+          <Link to="/privacy" className="link">Privacy Policy</Link>. We keep a record of the date and the version you
+          agreed to, together with your payment.
+        </p>
+        <h3>Your doctor, not ODYSSEY, is responsible for your care</h3>
+        <ul>
+          <li>The prescription or lab request is written by your physician. Ask your physician about your diagnosis, your medicines, doses, side effects or tests. ODYSSEY does not give medical advice.</li>
+          <li>The Service is not for emergencies. In an emergency, call 911 or go to the nearest hospital.</li>
+          <li>If you are opening the link for a minor or for someone who cannot act for themselves, you confirm you are their parent, guardian or authorised representative.</li>
+        </ul>
+        <h3>What you pay</h3>
+        <ul>
+          <li>Your physician sets the fee for opening the prescription. ODYSSEY does not set it. The amount is shown before you pay.</li>
+          <li>If your physician accepts online payments, you pay through PayMongo, and ODYSSEY collects the payment for your physician as their collecting agent. Your physician may add a convenience fee for paying online. It is shown on its own line before you pay and is not refundable.</li>
+          <li>If you pay using your physician’s own GCash, Maya or bank QR instead, the money goes straight to your physician. You then send the reference number and a screenshot of the receipt, and your physician confirms it.</li>
+          <li>Any official receipt for your physician’s professional fee comes from your physician, not from ODYSSEY.</li>
+        </ul>
+        <h3>Refunds and payment problems</h3>
+        <ul>
+          <li><strong>Paid online:</strong> to ask for a refund, contact your physician or email us. Refunds are sent by ODYSSEY through PayMongo back to the account that paid, as described in <a href="#refunds" className="link">Refunds and disputes</a>. The prescription fee is refunded; service and convenience fees are not. If you paid twice for the same prescription, the extra payment is refunded in full.</li>
+          <li><strong>Paid to your physician’s own QR:</strong> ODYSSEY does not receive that money, so any refund is between you and your physician.</li>
+          <li>If you paid but the prescription did not open, keep the page open for a few minutes, then contact your physician. If it is still not resolved, email us at {LEGAL.email} with the reference number.</li>
+        </ul>
+        <h3>Your responsibilities</h3>
+        <ul>
+          <li>Send only genuine receipts. A fake or altered receipt, or another person’s reference number, is prohibited and may be reported to the authorities.</li>
+          <li>Keep the link and any PIN your physician gives you private. Anyone who has both can see the prescription. If you think someone else has them, tell your physician.</li>
+          <li>Do not change, copy or reuse a prescription to obtain medicines it does not cover. A pharmacist may check a prescription with the physician before dispensing.</li>
+        </ul>
+        <h3>Your personal information</h3>
+        <p>
+          Your physician decides what goes on your prescription and is responsible for your information under the Data
+          Privacy Act of 2012. ODYSSEY stores and delivers it for your physician and handles your payment details. The{' '}
+          <Link to="/privacy" className="link">Privacy Policy</Link> explains what we keep, for how long and how to
+          exercise your rights.
         </p>
       </>
     ),

@@ -94,3 +94,21 @@ describe('change password checklist', () => {
     expect(t).toContain('Both new passwords match');
   });
 });
+
+describe('patient agrees to the terms before paying', () => {
+  it('shows the checkbox with links to both documents', async () => {
+    const { TermsAgreement } = await import('./features/patient/components/PaymentQrModal');
+    const html = renderToString(<TermsAgreement checked={false} onChange={() => {}} />);
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('href="/terms#patients"');
+    expect(html).toContain('href="/privacy"');
+    expect(text(html)).toContain('I agree to the Terms and Conditions and have read the Privacy Policy');
+  });
+
+  it('terms have a patient section and real dates', async () => {
+    const { default: Terms } = await import('./pages/Terms');
+    const t = text(wrap(<Terms />));
+    expect(t).toContain('For patients');
+    expect(t).toContain('Effective November 22, 2026 · Last updated November 22, 2026');
+  });
+});

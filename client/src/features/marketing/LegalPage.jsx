@@ -10,6 +10,11 @@ import { SiteFooter, SiteNav, useSiteMotion } from './components';
 export function LegalPage({ title, tabTitle, lead, updated, effective, sections, other }) {
   const ref = useSiteMotion();
   useEffect(() => { document.title = `${tabTitle ?? title} · E-Prescription by ODYSSEY`; }, [tabTitle, title]);
+  // A link such as /terms#patients: the page loads lazily, so jump to the section once it is on screen.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView({ block: 'start' });
+  }, []);
 
   return (
     <div className="ody" ref={ref}>

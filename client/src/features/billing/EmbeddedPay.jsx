@@ -76,7 +76,7 @@ const failedText = (attrs) =>
  * `body` is what /api/paymongo-checkout needs, without the method. `next` is where a full-page visitor comes back to.
  * `onPaid` runs once PayMongo says the payment succeeded; the webhook then applies it within seconds.
  */
-export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
+export function EmbeddedPay({ body, method, amount, next, onPaid, footnote, blockedReason = '' }) {
   const [stage, setStage] = useState('idle'); // idle | starting | qr | wallet | check | waiting | paid
   const [start, setStart] = useState(null);
   const startRef = useRef(null);
@@ -170,6 +170,7 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
   const pay = async (e) => {
     e?.preventDefault();
     setError('');
+    if (blockedReason) return setError(blockedReason);
     let parsed = null;
     if (isCard) {
       parsed = readCard(card);
@@ -316,9 +317,10 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote }) {
 
       {error && <div role="alert" className="rounded-[16px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">{error}</div>}
 
-      <Button type="submit" variant="primary" size="lg" className="w-full" loading={stage === 'starting'}>
+      <Button type="submit" variant="primary" size="lg" className="w-full" loading={stage === 'starting'} disabled={Boolean(blockedReason)}>
         Pay {formatPeso(amount)} with {method.label}
       </Button>
+      {blockedReason && <p className="text-center text-sm text-[#45546a]">{blockedReason}</p>}
       {footnote && <p className="text-center text-xs text-[#5f6a7c]">{footnote}</p>}
     </form>
   );

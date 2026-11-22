@@ -2,7 +2,9 @@
 //
 // Starts an embedded PayMongo payment (Payment Intent) and returns what the page needs to finish it on our site.
 // The amount always comes from the database, never the browser.
-//   Patient:  { "type": "rx", "rx_id": "<21 chars>", "method": "qrph" }                       (no login needed)
+//   Patient:  { "type": "rx", "rx_id": "<21 chars>", "method": "qrph",
+//               "terms_version": "2026-11-22", "privacy_version": "2026-11-22" }                 (no login needed)
+//             The two versions are the Terms and Privacy Policy the patient ticked; no payment starts without them.
 //   Doctor:   { "type": "plan", "plan_id": "solo", "period": "monthly", "seats": 0, "method": "qrph" }
 //             { "type": "seats", "seats": 2, "method": "qrph" }
 //             { "type": "pack", "pack_id": "pack-25", "quantity": 1, "method": "qrph" }   (doctor's login required)
@@ -37,7 +39,11 @@ const doneUrl = (env: Env, next: string) => `${appUrl(env)}/pay-done.html?next=$
 type Body = {
   type?: string; method?: string; rx_id?: string; plan_id?: string; period?: string;
   seats?: number; pack_id?: string; quantity?: number;
+  terms_version?: string; privacy_version?: string;
 };
+
+const VERSION = /^\d{4}-\d{2}-\d{2}$/;
+
 
 export async function paymongoCheckout(req: Request, env: Env): Promise<Response> {
   if (!env.PAYMONGO_SECRET_KEY || !env.PAYMONGO_PUBLIC_KEY) return json({ error: 'Online payment is not set up yet' }, 503);
@@ -55,8 +61,24 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
 
   if (body.type === 'rx') {
     if (!/^[A-Za-z0-9_-]{21}$/.test(body.rx_id ?? '')) return json({ error: 'Prescription not found' }, 404);
+    if (!VERSION.test(body.terms_version ?? '') || !VERSION.test(body.privacy_version ?? '')) {
+      return json({ error: 'Agree to the Terms and Conditions and the Privacy Policy before paying. Reload the page if you do not see the checkbox.' }, 400);
+    }
     const { data, error } = await admin.rpc('gateway_prepare_rx', { p_id: body.rx_id, p_method: body.method });
     if (error) return json({ error: friendly(error) }, error.code === 'P0002' ? 404 : 400);
+
+    // Proof the patient agreed, kept with the payment it went with. No record, no payment.
+    const { error: termsError } = await admin.rpc('record_rx_terms_acceptance', {
+      p_rx_id: body.rx_id,
+      p_terms_version: body.terms_version,
+      p_privacy_version: body.privacy_version,
+      p_gateway_payment_id: data.reused ? null : data.id,
+      p_user_agent: req.headers.get('user-agent'),
+    });
+    if (termsError) {
+      console.error('terms_acceptances insert failed:', termsError.message);
+      return json({ error: FAILED }, 502);
+    }
     // A hosted checkout opened before the switch to embedded payments: send the patient there.
     if (data.reused) return json({ checkout_url: data.checkout_url });
 

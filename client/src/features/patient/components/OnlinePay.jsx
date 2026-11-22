@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { cn, formatPeso } from '../../../lib/utils';
 import { METHOD_HINT } from '../../billing/gateway';
 import { EmbeddedPay } from '../../billing/EmbeddedPay';
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../marketing/legalInfo';
 
 /**
  * Pay a prescription online. The patient picks a method first, so the exact amount (and any convenience fee)
  * is on screen before paying. Paying happens right here (QR, card form, or a GCash / Maya window).
  */
-export function OnlinePay({ rx, options, onPaid }) {
+export function OnlinePay({ rx, options, onPaid, agreed = true }) {
   const methods = options.methods ?? [];
   const [method, setMethod] = useState(methods[0]?.method ?? null);
   const chosen = methods.find((m) => m.method === method) ?? methods[0];
@@ -68,7 +69,8 @@ export function OnlinePay({ rx, options, onPaid }) {
       </dl>
 
       <EmbeddedPay
-        body={{ type: 'rx', rx_id: rx.id }}
+        body={{ type: 'rx', rx_id: rx.id, terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION }}
+        blockedReason={agreed ? '' : 'Tick the box above to agree to the Terms and Privacy Policy first.'}
         method={chosen}
         amount={chosen.total}
         next={`/rx/${rx.id}?paid=1`}

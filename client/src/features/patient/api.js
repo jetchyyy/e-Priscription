@@ -37,13 +37,15 @@ export async function uploadPaymentProof(rxId, file) {
   return path;
 }
 
-export async function submitPaymentProof({ rxId, reference, path, methodId, amountRead }) {
+export async function submitPaymentProof({ rxId, reference, path, methodId, amountRead, termsVersion, privacyVersion }) {
   const { data, error } = await db().rpc('submit_payment_proof', {
     p_rx_id: rxId,
     p_reference: reference,
     p_screenshot_path: path,
     p_method_id: methodId ?? null,
     p_amount_read: amountRead ?? null,
+    p_terms_version: termsVersion,
+    p_privacy_version: privacyVersion,
   });
   if (error) throw error;
   return data;

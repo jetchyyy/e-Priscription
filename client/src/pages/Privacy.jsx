@@ -73,6 +73,7 @@ const S = [
             dispute).
           </li>
           <li>The time the prescription was opened, and whether a security PIN was entered correctly.</li>
+          <li>A record that the patient agreed to the Terms and Conditions and read this Privacy Policy before paying: the date and time, the version of each document, the payment it went with, and the browser’s name and version. We keep it as proof of the agreement, for as long as we keep the payment record.</li>
         </ul>
         <h3>Technical information</h3>
         <ul>

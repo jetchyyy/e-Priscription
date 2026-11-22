@@ -8,6 +8,31 @@ import { formatDateTime, formatPeso } from '../../../lib/utils';
 import { PROOF_MAX_BYTES, PROOF_TYPES, submitPaymentProof, uploadPaymentProof } from '../api';
 import { readReceipt } from '../ocr';
 import { OnlinePay } from './OnlinePay';
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../marketing/legalInfo';
+
+const NEEDS_AGREEMENT = 'Tick the box above to agree to the Terms and Privacy Policy first.';
+
+/** The patient must tick this before any payment. Links open in a new tab so the payment screen stays put. */
+export function TermsAgreement({ checked, onChange }) {
+  const link = 'font-semibold text-[#152839] underline underline-offset-2 hover:text-[#b8470a]';
+  return (
+    <label className={`flex cursor-pointer items-start gap-3 rounded-[18px] border p-4 text-[15px] text-[#152839] transition ${
+      checked ? 'border-[#152839] bg-white' : 'border-[#dce1e8] bg-[#f9f8f3]'}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-5 w-5 shrink-0 accent-[#152839]"
+      />
+      <span>
+        I agree to the{' '}
+        <a href="/terms#patients" target="_blank" rel="noopener noreferrer" className={link}>Terms and Conditions</a>
+        {' '}and have read the{' '}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className={link}>Privacy Policy</a>.
+      </span>
+    </label>
+  );
+}
 
 const copy = async (text, what) => {
   try {
@@ -66,6 +91,7 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
   const [reference, setReference] = useState('');
   const [ocr, setOcr] = useState({ state: 'idle' }); // idle | reading | done | failed
   const [error, setError] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const fileInput = useRef(null);
 
   const hasOnline = Boolean(online?.methods?.length) && !online.paid;
@@ -111,6 +137,8 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
         path,
         methodId: method?.id,
         amountRead: ocr.state === 'done' ? ocr.amount : null,
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
       });
     },
     onSuccess: () => {
@@ -123,6 +151,7 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
   const submit = (e) => {
     e.preventDefault();
     setError('');
+    if (!agreed) return setError(NEEDS_AGREEMENT);
     const ref = reference.trim();
     if (!/^[A-Za-z0-9 -]{6,40}$/.test(ref)) return setError('Enter the reference number exactly as it appears on your receipt.');
     if (!file) return setError('Add a screenshot of your payment receipt.');
@@ -267,9 +296,10 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
 
         {error && <div role="alert" className="rounded-[16px] bg-[#fbe9e1] p-4 text-sm text-[#7a2406]">{error}</div>}
 
-        <Button type="submit" variant="primary" size="lg" className="w-full" loading={send.isPending}>
+        <Button type="submit" variant="primary" size="lg" className="w-full" loading={send.isPending} disabled={!agreed}>
           Send receipt to your doctor
         </Button>
+        {!agreed && <p className="text-center text-sm text-[#45546a]">{NEEDS_AGREEMENT}</p>}
         <p className="text-center text-xs text-[#5f6a7c]">
           Only your doctor sees your receipt. Your prescription opens once they confirm the payment
           {rx.requires_pin ? ' and you enter the PIN they gave you' : ''}.
@@ -290,7 +320,8 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
         <WaitingForDoctor rx={rx} onClose={onClose} />
       ) : hasOnline ? (
         <div className="space-y-7">
-          <OnlinePay rx={rx} options={online} onPaid={onPaid} />
+          <TermsAgreement checked={agreed} onChange={(v) => { setAgreed(v); setError(''); }} />
+          <OnlinePay rx={rx} options={online} onPaid={onPaid} agreed={agreed} />
           {allowManual && methods.length > 0 && (
             showManual ? (
               <div className="space-y-4 border-t border-[#dce1e8] pt-6">
@@ -310,7 +341,10 @@ export function PaymentQrModal({ open, onClose, rx, online = null, allowManual =
           {rx.doctor?.phone ? ` at ${rx.doctor.phone}` : ''} to arrange payment.
         </div>
       ) : (
-        manualForm
+        <div className="space-y-7">
+          <TermsAgreement checked={agreed} onChange={(v) => { setAgreed(v); setError(''); }} />
+          {manualForm}
+        </div>
       )}
     </Modal>
   );
