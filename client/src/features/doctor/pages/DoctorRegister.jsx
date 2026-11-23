@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { Input, Select } from '../../../components/ui/Input';
 import { friendlyAuthError } from '../../auth/api';
 import { lookupReferral, registerDoctor } from '../api';
 import { registerSchema } from '../schemas';
+import { Turnstile } from '../../../components/Turnstile';
 
 const STEPS = [
   ['Create your account', 'Your details and clinic, a few minutes.'],
@@ -60,6 +61,7 @@ export default function DoctorRegister() {
   const [inviter, setInviter] = useState(null);
   const [result, setResult] = useState(null);
   const [serverError, setServerError] = useState('');
+  const turnstile = useRef(null);
   const {
     register,
     handleSubmit,
@@ -84,7 +86,7 @@ export default function DoctorRegister() {
   const onSubmit = async (values) => {
     setServerError('');
     try {
-      setResult(await registerDoctor(values));
+      setResult(await registerDoctor(values, () => turnstile.current?.takeToken() ?? null));
       forgetReferral();
     } catch (err) {
       setServerError(friendlyAuthError(err));
@@ -234,6 +236,7 @@ export default function DoctorRegister() {
           </div>
 
           <div className="space-y-3 pt-2">
+            <Turnstile ref={turnstile} action="register" className="flex justify-center" />
             <Button type="submit" variant="accent" size="lg" className="w-full" loading={isSubmitting}>
               Create account
             </Button>

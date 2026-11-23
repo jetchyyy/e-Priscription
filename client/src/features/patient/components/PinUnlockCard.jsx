@@ -5,9 +5,12 @@ import { formatPeso } from '../../../lib/utils';
 import { verifyRxPin } from '../api';
 import { toast } from 'sonner';
 
+const LOCKED_MSG = 'Too many wrong PINs. Please wait 15 minutes, then try again.';
+const lockedNow = (rx) => Boolean(rx.pin_locked_until && new Date(rx.pin_locked_until) > new Date());
+
 export function PinUnlockCard({ rx, onUnlocked }) {
   const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => (lockedNow(rx) ? LOCKED_MSG : ''));
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -25,12 +28,15 @@ export function PinUnlockCard({ rx, onUnlocked }) {
     setError('');
     setLoading(true);
     try {
-      const isValid = await verifyRxPin(rx.id, cleanPin);
-      if (isValid) {
+      const result = await verifyRxPin(rx.id, cleanPin);
+      if (result === 'ok') {
         toast.success('PIN verified! Prescription unlocked.');
         onUnlocked(cleanPin);
+      } else if (result === 'locked') {
+        setError(LOCKED_MSG);
+        toast.error(LOCKED_MSG);
       } else {
-        setError('Incorrect PIN. Please re-check the PIN given by your doctor.');
+        setError('Incorrect PIN. Please re-check the PIN given by your doctor. After 5 wrong tries it locks for 15 minutes.');
         toast.error('Incorrect PIN. Please check with your doctor.');
       }
     } catch (err) {

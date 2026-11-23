@@ -74,9 +74,10 @@ const failedText = (attrs) =>
  *   GCash / Maya:   the wallet's approval page opens in a small window over this page (wallets do not allow
  *                   being framed). If the browser blocks the window, the page goes there and comes back.
  * `body` is what /api/paymongo-checkout needs, without the method. `next` is where a full-page visitor comes back to.
+ * `extraBody`, if given, is awaited on every start and merged into the body (the patient's Turnstile token).
  * `onPaid` runs once PayMongo says the payment succeeded; the webhook then applies it within seconds.
  */
-export function EmbeddedPay({ body, method, amount, next, onPaid, footnote, blockedReason = '' }) {
+export function EmbeddedPay({ body, method, amount, next, onPaid, footnote, blockedReason = '', extraBody }) {
   const [stage, setStage] = useState('idle'); // idle | starting | qr | wallet | check | waiting | paid
   const [start, setStart] = useState(null);
   const startRef = useRef(null);
@@ -183,7 +184,8 @@ export function EmbeddedPay({ body, method, amount, next, onPaid, footnote, bloc
     }
     setStage('starting');
     try {
-      const s = await startPayment({ ...body, method: method.method });
+      const extra = extraBody ? await extraBody() : {};
+      const s = await startPayment({ ...body, ...extra, method: method.method });
       if (s.checkout_url) { try { popup.current?.close(); } catch (_) { /* gone */ } window.location.assign(s.checkout_url); return; }
       setStart(s);
       startRef.current = s;

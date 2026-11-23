@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +6,12 @@ import { AuthField } from './AuthShell';
 import { loginSchema } from '../schemas';
 import { friendlyAuthError, signIn } from '../api';
 import { homeFor } from '../../../store/authStore';
+import { Turnstile } from '../../../components/Turnstile';
 
 export function LoginForm() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+  const turnstile = useRef(null);
   const {
     register,
     handleSubmit,
@@ -19,7 +21,7 @@ export function LoginForm() {
   const onSubmit = async ({ email, password }) => {
     setServerError('');
     try {
-      const profile = await signIn(email, password);
+      const profile = await signIn(email, password, await turnstile.current?.takeToken());
       navigate(homeFor(profile), { replace: true });
     } catch (err) {
       setServerError(friendlyAuthError(err));
@@ -45,6 +47,7 @@ export function LoginForm() {
         error={errors.password?.message}
         {...register('password')}
       />
+      <Turnstile ref={turnstile} action="login" />
       <button type="submit" className="btn aform__submit" disabled={isSubmitting}>
         {isSubmitting ? 'Signing in…' : 'Sign in'}
       </button>

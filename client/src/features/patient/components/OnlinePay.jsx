@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { cn, formatPeso } from '../../../lib/utils';
 import { METHOD_HINT } from '../../billing/gateway';
 import { EmbeddedPay } from '../../billing/EmbeddedPay';
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../marketing/legalInfo';
+import { Turnstile } from '../../../components/Turnstile';
 
 /**
  * Pay a prescription online. The patient picks a method first, so the exact amount (and any convenience fee)
@@ -13,6 +14,10 @@ export function OnlinePay({ rx, options, onPaid, agreed = true }) {
   const [method, setMethod] = useState(methods[0]?.method ?? null);
   const chosen = methods.find((m) => m.method === method) ?? methods[0];
   const passFee = options.fee_mode === 'pass';
+  // Patients pay without logging in, so starting a payment needs a bot check. It sits here, not inside
+  // EmbeddedPay, so it stays mounted while the QR is on screen ("Get a new QR" needs a fresh token).
+  const turnstile = useRef(null);
+  const turnstileBody = async () => ({ turnstile_token: await turnstile.current?.takeToken() });
 
   if (!chosen) return null;
 
@@ -75,8 +80,10 @@ export function OnlinePay({ rx, options, onPaid, agreed = true }) {
         amount={chosen.total}
         next={`/rx/${rx.id}?paid=1`}
         onPaid={onPaid}
+        extraBody={turnstileBody}
         footnote={`Your prescription opens by itself once the payment goes through${rx.requires_pin ? ' and you enter the PIN your doctor gave you' : ''}.${passFee ? ' The convenience fee is not refundable.' : ''}`}
       />
+      <Turnstile ref={turnstile} action="rx_pay" className="flex justify-center" />
     </section>
   );
 }

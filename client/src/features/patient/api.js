@@ -17,7 +17,7 @@ export async function verifyRxPin(id, pin) {
     p_pin: String(pin).trim(),
   });
   if (error) throw error;
-  return Boolean(data);
+  return data; // 'ok' | 'wrong' | 'locked' (5 wrong PINs lock it for 15 minutes)
 }
 
 // ---------------------------------------------------------------------------------------------------------

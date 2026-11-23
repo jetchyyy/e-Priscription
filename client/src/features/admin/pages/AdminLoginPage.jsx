@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
@@ -7,12 +7,14 @@ import { loginSchema } from '../../auth/schemas';
 import { friendlyAuthError, signIn } from '../../auth/api';
 import { useAuthStore } from '../../../store/authStore';
 import { PageLoader } from '../../../components/ui/Spinner';
+import { Turnstile } from '../../../components/Turnstile';
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { session, profile, loading } = useAuthStore();
   const signOut = useAuthStore((s) => s.signOut);
   const [serverError, setServerError] = useState('');
+  const turnstile = useRef(null);
 
   const {
     register,
@@ -31,7 +33,7 @@ export default function AdminLoginPage() {
   const onSubmit = async ({ email, password }) => {
     setServerError('');
     try {
-      const profile = await signIn(email, password);
+      const profile = await signIn(email, password, await turnstile.current?.takeToken());
       if (!profile || profile.role !== 'admin') {
         await signOut();
         setServerError('This account is not an administrator. Doctors sign in on the doctor page.');
@@ -69,6 +71,7 @@ export default function AdminLoginPage() {
           error={errors.password?.message}
           {...register('password')}
         />
+        <Turnstile ref={turnstile} action="admin_login" />
         <button type="submit" className="btn aform__submit" disabled={isSubmitting}>
           {isSubmitting ? 'Signing in…' : 'Sign in to the console'}
         </button>

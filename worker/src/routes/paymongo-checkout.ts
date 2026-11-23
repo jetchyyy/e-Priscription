@@ -3,7 +3,8 @@
 // Starts an embedded PayMongo payment (Payment Intent) and returns what the page needs to finish it on our site.
 // The amount always comes from the database, never the browser.
 //   Patient:  { "type": "rx", "rx_id": "<21 chars>", "method": "qrph",
-//               "terms_version": "2026-11-22", "privacy_version": "2026-11-22" }                 (no login needed)
+//               "terms_version": "2026-11-22", "privacy_version": "2026-11-22",
+//               "turnstile_token": "<Cloudflare Turnstile token>" }                                       (no login needed)
 //             The two versions are the Terms and Privacy Policy the patient ticked; no payment starts without them.
 //   Doctor:   { "type": "plan", "plan_id": "solo", "period": "monthly", "seats": 0, "method": "qrph" }
 //             { "type": "seats", "seats": 2, "method": "qrph" }
@@ -18,6 +19,7 @@ import type { Env } from '../env';
 import { json, readJson } from '../http';
 import { appUrl, centavos, friendly, pm } from '../paymongo';
 import { serviceClient, userClient } from '../supabase';
+import { checkTurnstile } from '../turnstile';
 
 const METHODS = ['qrph', 'gcash', 'paymaya', 'card'];
 const FAILED = 'Could not start the payment. Please try again in a moment.';
@@ -40,6 +42,7 @@ type Body = {
   type?: string; method?: string; rx_id?: string; plan_id?: string; period?: string;
   seats?: number; pack_id?: string; quantity?: number;
   terms_version?: string; privacy_version?: string;
+  turnstile_token?: string;
 };
 
 const VERSION = /^\d{4}-\d{2}-\d{2}$/;
@@ -61,6 +64,9 @@ export async function paymongoCheckout(req: Request, env: Env): Promise<Response
 
   if (body.type === 'rx') {
     if (!/^[A-Za-z0-9_-]{21}$/.test(body.rx_id ?? '')) return json({ error: 'Prescription not found' }, 404);
+    // No login here, so the patient's payment start carries a Turnstile token (doctors' purchases need a login).
+    const blocked = await checkTurnstile(env, req, body.turnstile_token);
+    if (blocked) return blocked;
     if (!VERSION.test(body.terms_version ?? '') || !VERSION.test(body.privacy_version ?? '')) {
       return json({ error: 'Agree to the Terms and Conditions and the Privacy Policy before paying. Reload the page if you do not see the checkbox.' }, 400);
     }

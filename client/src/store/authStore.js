@@ -51,8 +51,11 @@ export const useAuthStore = create((set, get) => ({
     return profile;
   },
 
-  async signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  /** `captchaToken`: a Turnstile token, checked by Supabase Auth when its bot protection is on. */
+  async signIn(email, password, captchaToken = null) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email, password, ...(captchaToken ? { options: { captchaToken } } : {}),
+    });
     if (error) throw error;
     const profile = await get().applySession(data.session);
     return profile;

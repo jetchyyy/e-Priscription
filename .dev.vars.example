@@ -23,3 +23,7 @@ APP_URL=http://localhost:5173
 PAYMONGO_SOURCE_ACCOUNT_NUMBER=
 PAYMONGO_SOURCE_ACCOUNT_NAME=
 PAYMONGO_SOURCE_ACCOUNT_BIC=
+
+# Cloudflare Turnstile secret key (Cloudflare dashboard -> Turnstile). The site key is VITE_TURNSTILE_SITE_KEY in client/.env.
+# Leave empty to skip the check locally. Test secret that always passes: 1x0000000000000000000000000000000AA
+TURNSTILE_SECRET_KEY=

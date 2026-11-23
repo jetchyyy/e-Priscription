@@ -7,7 +7,7 @@
 // Settings and secrets (none of them go in this file). Set each once with `npx wrangler secret put <NAME>`,
 // or in the dashboard under Settings -> Variables and Secrets as type "Secret" so a deploy never removes them:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-//   PAYMONGO_SECRET_KEY, PAYMONGO_PUBLIC_KEY, PAYMONGO_WEBHOOK_SECRET,
+//   PAYMONGO_SECRET_KEY, PAYMONGO_PUBLIC_KEY, PAYMONGO_WEBHOOK_SECRET, TURNSTILE_SECRET_KEY,
 //   optional: APP_URL, PAYMONGO_SOURCE_ACCOUNT_NUMBER, PAYMONGO_SOURCE_ACCOUNT_NAME, PAYMONGO_SOURCE_ACCOUNT_BIC
 // For local development copy .dev.vars.example to .dev.vars (git ignores it).
 {

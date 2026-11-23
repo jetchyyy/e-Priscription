@@ -7,6 +7,7 @@ import { Input } from '../../../components/ui/Input';
 import { useAuthStore } from '../../../store/authStore';
 import { db } from '../../../lib/supabase';
 import { friendlyAuthError } from '../../auth/api';
+import { Turnstile } from '../../../components/Turnstile';
 
 /** Rules a new password must pass. Shown to the doctor as a live checklist. */
 export const PASSWORD_RULES = [
@@ -64,6 +65,7 @@ export function ChangePasswordCard() {
   const [currentError, setCurrentError] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const turnstile = useRef(null);
   const sectionRef = useRef(null);
   const { hash } = useLocation();
 
@@ -89,7 +91,11 @@ export function ChangePasswordCard() {
     try {
       const supabase = db();
       // Confirm it is really the doctor before changing the password.
-      const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: current });
+      // This is a sign-in, so Supabase's bot protection asks for a Turnstile token here too.
+      const captchaToken = await turnstile.current?.takeToken();
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email, password: current, ...(captchaToken ? { options: { captchaToken } } : {}),
+      });
       if (authErr) {
         if (/invalid login credentials/i.test(authErr.message)) setCurrentError('Your current password is incorrect');
         else setError(friendlyAuthError(authErr));
@@ -163,6 +169,7 @@ export function ChangePasswordCard() {
           </ul>
         </div>
 
+        <Turnstile ref={turnstile} action="change_password" />
         <Button type="submit" variant="primary" loading={saving} disabled={!check.ok || !current}>
           Change password
         </Button>

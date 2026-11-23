@@ -16,4 +16,5 @@ export interface Env {
   PAYMONGO_SOURCE_ACCOUNT_NUMBER?: string;
   PAYMONGO_SOURCE_ACCOUNT_NAME?: string;
   PAYMONGO_SOURCE_ACCOUNT_BIC?: string;
+  TURNSTILE_SECRET_KEY?: string; // Cloudflare Turnstile; without it the bot check is skipped (local development)
 }

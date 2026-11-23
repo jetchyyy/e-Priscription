@@ -1,5 +1,5 @@
 import { db } from '../../lib/supabase';
-import { ApiError, callApi } from '../../lib/api';
+import { callApi } from '../../lib/api';
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' };
 
@@ -21,12 +21,12 @@ export async function uploadLicense(userId, file) {
  * If email confirmation is ON there is no session yet, so the license upload
  * is deferred to the "awaiting approval" page.
  */
-export async function registerDoctor(values) {
+export async function registerDoctor(values, takeToken = async () => null) {
   const supabase = db();
 
-  // 1. Create the account through the Worker (/api/register-doctor), which uses the Auth admin API.
-  let userId = null;
-  let registrationSuccess = false;
+  // 1. Create the account through the Worker (/api/register-doctor), which uses the Auth admin API and checks the
+  //    Turnstile token. There is no fallback to supabase.auth.signUp: public sign-ups stay off in Supabase so
+  //    bots cannot skip the Worker. Run `npm run dev:worker` to register locally.
   const body = {
     email: values.email,
     password: values.password,
@@ -39,46 +39,20 @@ export async function registerDoctor(values) {
     clinicAddress: values.clinicAddress || null,
     phone: values.phone || null,
     referralCode: values.referralCode || null,
+    turnstileToken: await takeToken(),
   };
-
-  try {
-    const data = await callApi('register-doctor', body);
-    userId = data?.userId ?? null;
-    registrationSuccess = Boolean(userId);
-  } catch (err) {
-    // Only when the Worker is not running (e.g. `npm run dev` without `npm run dev:worker`): fall back to signUp.
-    // Every real answer from the Worker, such as "email already registered", is shown as it is.
-    if (!(err instanceof ApiError) || ![0, 404, 502, 503, 504].includes(err.status)) throw err;
-    console.warn('/api/register-doctor unavailable, falling back to auth.signUp:', err.message);
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: {
-          full_name: values.fullName,
-          prc_no: values.prcNo,
-          ptr_no: values.ptrNo ?? '',
-          s2_no: values.s2No ?? '',
-          specialty: values.specialty,
-          clinic_name: values.clinicName,
-          clinic_address: values.clinicAddress,
-          phone: values.phone,
-          referral_code: (values.referralCode ?? '').trim().toUpperCase(),
-        },
-      },
-    });
-    if (signUpError) throw signUpError;
-    userId = authData?.user?.id;
-    registrationSuccess = true;
-  }
+  await callApi('register-doctor', body);
 
   // 2. Upload license document if provided
   let licenseUploaded = false;
   if (values.licenseFile?.[0]) {
     try {
+      // A sign-in, so it needs its own Turnstile token when Supabase's bot protection is on.
+      const captchaToken = await takeToken();
       const { data: sessionData } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
+        ...(captchaToken ? { options: { captchaToken } } : {}),
       });
       if (sessionData?.user) {
         await uploadLicense(sessionData.user.id, values.licenseFile[0]);

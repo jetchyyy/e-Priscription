@@ -5,17 +5,21 @@
 import type { Env } from '../env';
 import { json, readJson } from '../http';
 import { adminCreateUser } from '../supabase';
+import { checkTurnstile } from '../turnstile';
 
 type Body = {
   email?: string; password?: string; fullName?: string; prcNo?: string; ptrNo?: string | null; s2No?: string | null;
   specialty?: string | null; clinicName?: string | null; clinicAddress?: string | null; phone?: string | null;
   referralCode?: string | null;
+  turnstileToken?: string;
 };
 
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
 export async function registerDoctor(req: Request, env: Env): Promise<Response> {
   const body = await readJson<Body>(req);
+  const blocked = await checkTurnstile(env, req, body?.turnstileToken);
+  if (blocked) return blocked;
   if (!body?.email || !body.password || !body.fullName || !body.prcNo) {
     return json({ error: 'Missing required registration fields (email, password, full name, PRC license number)' }, 400);
   }
