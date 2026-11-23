@@ -196,6 +196,33 @@ export default function CreatePrescription({ kind = 'rx' }) {
     }
     toast.error('Please fill in the highlighted fields.');
   };
+  const submitForm = handleSubmit(onValid, onInvalid);
+
+  // The preview offers its own Generate button once the main details are in.
+  const hasItems = isLab
+    ? formValues.labTests?.some((t) => t?.name?.trim())
+    : formValues.medicines?.some((m) => m?.genericName?.trim());
+  const readyToGenerate = Boolean(formValues.patientName?.trim() && hasItems);
+  const generateFromPreview = () => {
+    setMobilePreviewOpen(false);
+    submitForm();
+  };
+  const generateButton = (
+    <Button
+      type="button"
+      variant="accent"
+      className="w-full"
+      disabled={atLimit || !readyToGenerate}
+      onClick={generateFromPreview}
+    >
+      <FilePlus2 className="h-4 w-4" aria-hidden="true" /> Generate {docName}
+    </Button>
+  );
+  const generateHint = !readyToGenerate && !atLimit && (
+    <p className="text-center text-xs text-[#5f6a7c]">
+      Add the patient’s name and at least one {isLab ? 'test' : 'medicine'} to generate.
+    </p>
+  );
 
   const slipProps = (v) => ({
     stage: 'written',
@@ -235,7 +262,7 @@ export default function CreatePrescription({ kind = 'rx' }) {
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 items-start">
         {/* Form in columns 1 to 7 on desktop */}
         <form
-          onSubmit={handleSubmit(onValid, onInvalid)}
+          onSubmit={submitForm}
           noValidate
           className="xl:col-span-7 space-y-6"
         >
@@ -427,6 +454,10 @@ export default function CreatePrescription({ kind = 'rx' }) {
               <span className="h-2 w-1.5 rounded-[47%/35.6%] bg-[#ff6f07]" />
             </div>
             <RxSlip {...slipProps(formValues)} />
+            <div className="space-y-2 border-t border-[#dce1e8] pt-4">
+              {generateButton}
+              {generateHint}
+            </div>
           </div>
         </div>
       </div>
@@ -437,6 +468,7 @@ export default function CreatePrescription({ kind = 'rx' }) {
         onClose={() => setMobilePreviewOpen(false)}
         title="Preview"
         size="md"
+        footer={<div className="space-y-2">{generateButton}{generateHint}</div>}
       >
         <RxSlip {...slipProps(formValues)} />
       </Modal>
