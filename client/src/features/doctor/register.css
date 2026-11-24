@@ -1,0 +1,61 @@
+/* ---------- step-by-step doctor signup: one question per screen ---------- */
+.ody .wiz { display: flex; flex-direction: column; min-height: min(560px, 70svh); }
+.ody .wiz__top { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.ody .wiz__back {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 12px 0 4px; margin-left: -4px;
+  border: 0; border-radius: 12px; background: transparent; color: var(--navy); font: 600 15px var(--f-text); cursor: pointer;
+}
+.ody .wiz__back:hover { background: var(--sand); }
+.ody .wiz__bar { flex: 1; height: 6px; background: var(--sand); border-radius: 999px; overflow: hidden; }
+.ody .wiz__bar i { display: block; height: 100%; background: var(--orange); border-radius: 999px; transition: width 300ms var(--ease-out); }
+
+.ody .wiz__body { flex: 1; display: grid; align-content: start; gap: 20px; }
+.ody .wiz__q { font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+.ody .wiz__help { margin-top: -8px; color: var(--slate); font-size: 17px; line-height: 1.5; max-width: 40ch; }
+.ody .wiz__help--small { margin-top: 0; font-size: 14px; color: var(--harbor); }
+.ody .wiz__fields { display: grid; gap: 18px; }
+
+.ody .wiz__choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ody .wiz__choices--two { grid-template-columns: 1fr 1fr; }
+.ody .wiz__choice {
+  position: relative; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 12px 16px;
+  border: 2px solid transparent; border-radius: 16px; background: var(--white); color: var(--navy);
+  font: 600 15px/1.25 var(--f-text); text-align: left; cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 140ms var(--ease-out);
+}
+.ody .wiz__choice:hover { border-color: var(--mist-deep); }
+.ody .wiz__choice:active { transform: scale(.98); }
+.ody .wiz__choice:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+.ody .wiz__choice.is-on { border-color: var(--navy); background: #f1f3f6; }
+.ody .wiz__choice--big { flex-direction: column; justify-content: center; text-align: center; min-height: 120px; gap: 10px; }
+.ody .wiz__tick { width: 18px; height: 18px; flex: none; color: var(--orange); }
+
+.ody .wiz__invite { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 18px; background: var(--sand); font-weight: 600; }
+.ody .wiz__ok { display: flex; align-items: center; gap: 6px; margin-top: -10px; color: #1d6b3a; font-weight: 600; font-size: 15px; }
+
+.ody .wiz__file { display: grid; justify-items: start; gap: 12px; }
+.ody .wiz__file img { width: 100%; max-height: 280px; object-fit: contain; border-radius: 16px; background: var(--white); }
+.ody .wiz__filename { display: flex; align-items: center; gap: 8px; padding: 16px 18px; border-radius: 16px; background: var(--white); font-weight: 600; word-break: break-all; }
+
+.ody .wiz__review { display: grid; border-radius: 18px; background: var(--white); overflow: hidden; }
+.ody .wiz__review li + li { border-top: 1px solid var(--mist); }
+.ody .wiz__review button {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 18px;
+  border: 0; background: transparent; color: var(--navy); text-align: left; cursor: pointer; font: inherit;
+}
+.ody .wiz__review button:hover { background: var(--warm); }
+.ody .wiz__review span { grid-column: 1; font-size: 13px; color: var(--harbor); }
+.ody .wiz__review b { grid-column: 1; font-weight: 600; font-size: 16px; word-break: break-word; }
+.ody .wiz__review em { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-style: normal; font-weight: 600; font-size: 14px; color: var(--ember); }
+
+.ody .wiz__next { margin-top: 32px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ody .wiz__body { animation: wiz-in 260ms var(--ease-out); }
+}
+@keyframes wiz-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 959px) {
+  /* Keep Continue in reach of the thumb on phones. */
+  .ody .wiz__next { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); box-shadow: 0 8px 24px rgba(21, 40, 57, .18); }
+}

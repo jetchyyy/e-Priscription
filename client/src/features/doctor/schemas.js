@@ -20,7 +20,8 @@ export const optionalPhone = z.union([z.literal(''), phSchema]).optional();
 const digitsOnly = (label, min, max) =>
   z.string().trim().regex(new RegExp(`^\\d{${min},${max}}$`), `${label} should be ${min}–${max} digits`);
 
-export const registerSchema = z
+/** Registration fields without the cross-field check, so the step-by-step signup can check one screen at a time. */
+export const registerFields = z
   .object({
     fullName: text('Full name', 3, 120),
     email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
@@ -51,7 +52,9 @@ export const registerSchema = z
     acceptTerms: z.literal(true, {
       errorMap: () => ({ message: 'Agree to the Terms and Conditions and the Privacy Policy to create your account' }),
     }),
-  })
+  });
+
+export const registerSchema = registerFields
   .refine((v) => v.password === v.confirmPassword, {
     path: ['confirmPassword'],
     message: 'Passwords do not match',

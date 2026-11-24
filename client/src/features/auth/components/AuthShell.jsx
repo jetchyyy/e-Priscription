@@ -44,8 +44,8 @@ export function AuthShell({ title, lead, tabTitle, sideTitle, sideText, steps, c
           <Link to="/" className="link auth__back">Back to site</Link>
         </div>
         <div className="auth__box">
-          <h1>{title}</h1>
-          <p className="auth__lead">{lead}</p>
+          {title && <h1>{title}</h1>}
+          {lead && <p className="auth__lead">{lead}</p>}
           {children}
           <div className="auth__footer">{footer}</div>
         </div>
@@ -82,3 +82,50 @@ export const AuthField = forwardRef(function AuthField({ label, error, type = 't
     </div>
   );
 });
+
+/** The Philippine flag, drawn so it looks the same on every phone (Windows shows flag emoji as letters). */
+function PhFlag() {
+  return (
+    <svg className="aphone__flag" viewBox="0 0 30 15" aria-hidden="true">
+      <rect width="30" height="7.5" fill="#0038a8" />
+      <rect y="7.5" width="30" height="7.5" fill="#ce1126" />
+      <path d="M0 0 13 7.5 0 15z" fill="#fff" />
+      <circle cx="4.6" cy="7.5" r="1.7" fill="#fcd116" />
+    </svg>
+  );
+}
+
+/** Local digits as typed after +63: no spaces, no leading 0 or 63. */
+const phLocal = (v) => String(v ?? '').replace(/\D/g, '').replace(/^(63|0)/, '').slice(0, 10);
+const phSpaced = (d) => (d.length <= 3 ? d : d.length <= 6 ? `${d.slice(0, 3)} ${d.slice(3)}` : `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`);
+
+/**
+ * A phone number with the country fixed to the Philippines: flag and +63 in front, the doctor types the rest.
+ * `value` and `onChange` use the full number (+639171234567), which the PH number check accepts.
+ */
+export function PhoneField({ label, error, value, onChange, id, placeholder = '917 123 4567', ...props }) {
+  const auto = useId();
+  const _id = id ?? auto;
+  const local = phLocal(value);
+  return (
+    <div className="afield">
+      <label htmlFor={_id}>{label}</label>
+      <div className={`afield__control aphone${error ? ' has-error' : ''}`}>
+        <span className="aphone__cc" aria-label="Philippines, +63"><PhFlag />+63</span>
+        <input
+          id={_id}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          placeholder={placeholder}
+          value={phSpaced(local)}
+          onChange={(e) => { const d = phLocal(e.target.value); onChange(d ? `+63${d}` : ''); }}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${_id}-err` : undefined}
+          {...props}
+        />
+      </div>
+      {error && <p id={`${_id}-err`} role="alert" className="afield__err">{error}</p>}
+    </div>
+  );
+}

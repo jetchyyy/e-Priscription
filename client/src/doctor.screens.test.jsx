@@ -112,3 +112,14 @@ describe('patient agrees to the terms before paying', () => {
     expect(t).toContain('Effective November 22, 2026 · Last updated November 22, 2026');
   });
 });
+
+describe('doctor signup', () => {
+  it('opens on a friendly welcome, one question at a time', async () => {
+    const { default: DoctorRegister } = await import('./features/doctor/pages/DoctorRegister');
+    const t = text(wrap(<DoctorRegister />));
+    expect(t).toContain('Let’s get you set up, Doc.');
+    expect(t).toContain('Let’s start');
+    expect(t).toContain('Already registered?');
+    expect(t).not.toContain('PRC license no.'); // later screens are not rendered yet
+  });
+});
